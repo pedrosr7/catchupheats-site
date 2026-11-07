@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://catchupheats.com/sitemap.xml
