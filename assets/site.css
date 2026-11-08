@@ -526,6 +526,68 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
   letter-spacing: .08em;
 }
 
+/* Hub pages: a region's, a discipline's, a month's */
+
+.hub { padding: 36px 0 4px; }
+
+.hub h1 {
+  margin: 0;
+  font: 900 clamp(44px, 10vw, 96px)/.9 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  letter-spacing: -.01em;
+  color: var(--heat);
+}
+
+.hub .lede { max-width: 46ch; }
+
+.hub-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.hub-links-heading {
+  flex-basis: 100%;
+  margin: 0 0 2px;
+  color: var(--muted);
+  font: 600 12px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.hub-links a {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--paper);
+  text-decoration: none;
+  transition: border-color .2s, color .2s;
+}
+
+.hub-links a:hover { border-color: var(--heat); color: var(--heat); }
+
+.detail .hub-links { margin-top: 26px; }
+
+.explore { margin: 48px 0 8px; padding-top: 28px; border-top: 1px solid var(--line); }
+
+.explore h2, .faq h2 {
+  margin: 0 0 18px;
+  font: 900 34px/.9 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+}
+
+.faq { margin: 40px 0 8px; padding-top: 28px; border-top: 1px solid var(--line); }
+
+.faq dl { margin: 0; }
+
+.faq dt { margin-top: 18px; font-weight: 700; }
+
+.faq dd { max-width: 60ch; margin: 6px 0 0; color: var(--muted); }
+
 /* Map */
 
 .map-title {
