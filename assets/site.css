@@ -13,6 +13,9 @@
   --crossfit: #ff4a1c;
   --hyrox: #ffd23f;
   --hybrid: #3ec6b5;
+  --deka: #5b8cff;
+  --ocr: #8fd14f;
+  --spartan: #ff5fa2;
   --display: "HelveticaNeue-CondensedBlack", "Helvetica Neue Condensed Black", "Helvetica Neue", "sans-serif-condensed",
     "Roboto Condensed", "Arial Narrow", Impact, sans-serif;
   --body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -383,6 +386,9 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 .d-crossfit { --accent: var(--crossfit); }
 .d-hyrox { --accent: var(--hyrox); }
 .d-hybrid { --accent: var(--hybrid); }
+.d-deka { --accent: var(--deka); }
+.d-ocr { --accent: var(--ocr); }
+.d-spartan { --accent: var(--spartan); }
 
 .card-name {
   grid-area: name;
