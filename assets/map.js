@@ -255,7 +255,16 @@
       pick.type = "button";
       pick.className = "map-card-pick d-" + m.row.dataset.discipline;
       pick.dataset.id = m.row.dataset.id;
-      pick.textContent = m.row.querySelector(".map-name").textContent + " · " + m.row.querySelector(".map-when").textContent;
+      // Like the map's own rows: the dated stamp in the discipline's colour, the name, then discipline and dates.
+      pick.appendChild(m.row.querySelector(".card-stamp").cloneNode(true));
+      var name = document.createElement("span");
+      name.className = "map-card-pick-name";
+      name.textContent = m.row.querySelector(".map-name").textContent;
+      var meta = document.createElement("span");
+      meta.className = "map-card-pick-meta";
+      meta.textContent = m.row.querySelector(".card-discipline").textContent + " · " + m.row.querySelector(".map-when").textContent;
+      pick.appendChild(name);
+      pick.appendChild(meta);
       pick.addEventListener("click", function () { select(m.row.dataset.id, false); });
       item.appendChild(pick);
       items.appendChild(item);
