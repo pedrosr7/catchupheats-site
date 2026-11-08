@@ -86,6 +86,29 @@ a { color: inherit; }
 
 .lang-switch:hover { color: var(--paper); border-color: var(--paper); }
 
+.top { flex-wrap: wrap; row-gap: 10px; }
+
+.nav { display: flex; gap: 4px; margin-left: auto; margin-right: 10px; }
+
+.nav a, .lang-switch { white-space: nowrap; }
+
+/* On a phone the brand and the language share the first row, the sections the second. */
+@media (max-width: 559px) {
+  .nav { order: 3; width: 100%; margin: 0; }
+}
+
+.nav a {
+  font: 600 12px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 9px 10px;
+  border-radius: 999px;
+}
+
+.nav a[aria-current="page"] { color: var(--paper); background: var(--raise); }
+
 /* Ticker */
 
 /* Ticker and filters run edge to edge, past the reading column, like a band across a poster. */
@@ -495,6 +518,141 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
   font: 600 12px/1 var(--mono);
   text-transform: uppercase;
   letter-spacing: .08em;
+}
+
+/* Map */
+
+.map-title {
+  margin: 28px 0 18px;
+  font: 900 clamp(48px, 12vw, 110px)/.88 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  color: var(--heat);
+}
+
+#ranges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+
+#ranges button.on { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+
+.range-date { display: flex; align-items: center; gap: 6px; }
+
+.range-date span { font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+
+.range-date input {
+  font: 600 16px/1.2 var(--body);
+  color: var(--paper);
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 14px;
+  color-scheme: dark;
+}
+
+.map-nojs, #map-empty { color: var(--muted); }
+
+.map-layout { display: grid; grid-template-columns: minmax(280px, 380px) minmax(0, 1fr); gap: 20px; align-items: start; }
+
+.map-layout:has(> .map-stage[hidden]) { grid-template-columns: minmax(0, 1fr); }
+
+.map-list { list-style: none; margin: 0; padding: 0; }
+
+.map-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 14px;
+  padding: 14px 8px;
+  border-top: 1px solid var(--line);
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.map-row:hover, .map-row.on { background: var(--raise); }
+
+/* The listing's card names its grid areas; a map row is a plain two-column grid. */
+.map-row .card-stamp, .map-row .card-discipline, .map-row .card-meta { grid-area: auto; }
+
+.map-row.on { box-shadow: inset 4px 0 0 var(--accent); }
+
+.map-name { margin: 6px 0 4px; font: 900 26px/.95 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.map-name a { text-decoration: none; }
+
+.map-when { margin: 0; font-weight: 700; }
+
+/* As tall as the window allows: a fixed minimum would cut the card off on a phone held sideways. */
+.map-stage { position: sticky; top: 76px; height: calc(100vh - 96px); min-height: 240px; border-radius: 16px; overflow: hidden; }
+
+#map { position: absolute; inset: 0; background: var(--panel); }
+
+.map-marker {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.map-marker span {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 2px;
+  border-radius: 50% 50% 50% 0;
+  border: 2px solid var(--ink);
+  background: var(--accent);
+  transform: rotate(-45deg);
+  transition: transform .2s var(--ease-out);
+}
+
+.map-marker:hover span, .map-marker.on span { transform: rotate(-45deg) scale(1.35); }
+
+.map-marker.on { z-index: 2; }
+
+#map-card {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  grid-template-columns: minmax(0, 1fr);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+#map-card .card-discipline { grid-area: auto; color: var(--ink); }
+
+.map-card-name { font: 900 26px/.95 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.map-card-meta { font-size: 14px; }
+
+.map-card-link { font-weight: 700; }
+
+.map-card-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  font-size: 22px;
+}
+
+.map-row:focus-visible { outline: 2px solid var(--heat); outline-offset: -2px; }
+
+.maplibregl-ctrl-attrib { font-size: 11px; }
+
+@media (max-width: 759px) {
+  .map-layout { grid-template-columns: 1fr; }
+  .map-stage { order: -1; position: relative; top: 0; height: 55vh; min-height: 300px; }
 }
 
 /* Legal */
