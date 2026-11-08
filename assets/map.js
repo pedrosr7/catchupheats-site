@@ -46,6 +46,25 @@
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
     map.on("moveend", spread);
+    // Zoomed out past Spain the pins spread over the whole world: the map stops at Spain, the Canaries included, at
+    // whatever size the window has.
+    var spain = [[-18.4, 27.5], [4.6, 44.0]];
+    var whole = null;
+    function floor() {
+      whole = map.cameraForBounds(spain, { padding: { top: 40, bottom: 12, left: 18, right: 18 } });
+      if (whole) map.setMinZoom(whole.zoom);
+      settle();
+    }
+    // The padding leaves room for a pin's head above its point. At the floor the whole of Spain is in view, not a corner
+    // of it with the Canaries cut off.
+    function settle() {
+      if (!whole || map.getZoom() > whole.zoom + 0.01) return;
+      var c = map.getCenter();
+      if (Math.abs(c.lng - whole.center.lng) > 0.01 || Math.abs(c.lat - whole.center.lat) > 0.01) map.jumpTo({ center: whole.center });
+    }
+    floor();
+    map.on("resize", floor);
+    map.on("zoomend", settle);
     // Without tiles (offline, or the tile server down) the pins still stand; the line under the title says why.
     map.on("error", function () {
       notice.textContent = words.noTiles;
