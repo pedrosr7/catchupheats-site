@@ -146,7 +146,11 @@ a { color: inherit; }
 
 .hero h1 {
   margin: 0;
-  font: 900 clamp(64px, 17vw, 168px)/.82 var(--display);
+  /* «Ninguna competi», the longest line, is about 7.3 em wide here: 7.6 leaves room for a wider fallback face. 136px is
+     what it takes in the 1048px desktop column. */
+  /* First in vw, for a browser that does not know cqi and would otherwise drop the whole line. */
+  font: 900 min(calc((100vw - 32px) / 7.6), 136px)/.82 var(--display);
+  font: 900 min(calc((100cqi - 32px) / 7.6), 136px)/.82 var(--display);
   font-stretch: condensed;
   text-transform: uppercase;
   letter-spacing: -.02em;
@@ -155,6 +159,8 @@ a { color: inherit; }
 
 .hero-line {
   display: block;
+  /* A face wider than ours breaks «ninguna competi» between its words, never inside one. */
+  overflow-wrap: normal;
   animation: rise .9s var(--ease-out) both;
   animation-delay: calc(var(--i) * 90ms);
 }
@@ -812,11 +818,6 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   .card-link { grid-template-columns: 76px 1fr auto; grid-template-areas: "stamp discipline meta" "stamp name meta" "stamp dates meta"; }
   .card-stamp { width: 76px; height: 76px; }
   .card-meta { align-self: center; justify-content: flex-end; margin: 0; }
-}
-
-@media (min-width: 1000px) {
-  /* 190px is the most «ningún heat» takes in the 1048px column, in the narrowest of the fallback faces. */
-  .hero h1 { font-size: clamp(168px, 15vw, 190px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
