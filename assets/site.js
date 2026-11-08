@@ -18,6 +18,32 @@
   if (countdown) refresh(countdown);
   var clock = document.querySelector(".next-clock");
   if (clock) run(clock);
+  [].forEach.call(document.querySelectorAll("a.instagram"), share);
+
+  // On a phone that can share files, the card goes straight to the share sheet, Instagram included; elsewhere the link
+  // downloads it. The file is fetched once the button comes into view, because iOS only shares from inside the tap itself,
+  // never after a wait; a visitor who never scrolls to it downloads nothing.
+  function share(link) {
+    if (!navigator.canShare || !window.fetch || !window.IntersectionObserver) return;
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    var file = null;
+    var watch = new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting) return;
+      watch.disconnect();
+      fetch(link.href).then(function (response) { return response.blob(); }).then(function (blob) {
+        var ready = new File([blob], link.getAttribute("download"), { type: "image/png" });
+        if (navigator.canShare({ files: [ready] })) file = ready;
+      }).catch(function () {});
+    });
+    watch.observe(link);
+    link.addEventListener("click", function (event) {
+      if (!file) return;
+      event.preventDefault();
+      navigator.share({ files: [file] }).catch(function (error) {
+        if (error && error.name !== "AbortError") window.location.href = link.href;
+      });
+    });
+  }
 
   // Days, hours, minutes and seconds to the start, at midnight on its day where the visitor is.
   function run(clock) {

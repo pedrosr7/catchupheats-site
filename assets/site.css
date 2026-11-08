@@ -515,6 +515,28 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .official:active { transform: scale(.98); }
 
+.share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 22px 0 10px; }
+
+.share-heading {
+  flex-basis: 100%;
+  margin: 0 0 2px;
+  color: var(--muted);
+  font: 600 12px/1 var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.instagram {
+  padding: 8px 14px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--paper);
+  text-decoration: none;
+  transition: background .2s, color .2s;
+}
+
+.instagram:hover { background: var(--accent); color: var(--ink); }
+
 .checked { color: var(--muted); font-size: 13px; }
 
 .back {
