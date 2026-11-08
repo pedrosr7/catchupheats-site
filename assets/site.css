@@ -556,11 +556,16 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .map-list { list-style: none; margin: 0; padding: 0; }
 
+/*
+ * A map row: the stamp on the left, the text on its right starting at the stamp's top, and every line of the text on
+ * one left edge. The listing's card rules (grid areas, chips pushed right on wide screens) do not reach it.
+ */
 .map-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px 8px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+  padding: 16px 14px;
   border-top: 1px solid var(--line);
   cursor: pointer;
   transition: background .2s;
@@ -568,18 +573,32 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .map-row:hover, .map-row.on { background: var(--raise); }
 
-/* The listing's card names its grid areas; a map row is a plain two-column grid. */
-.map-row .card-stamp, .map-row .card-discipline, .map-row .card-meta { grid-area: auto; }
+.map-row.on { box-shadow: inset 3px 0 0 var(--accent); }
 
-.map-row.on { box-shadow: inset 4px 0 0 var(--accent); }
+.map-row .card-stamp { grid-area: auto; width: 56px; height: 56px; border-radius: 12px; }
 
-.map-name { margin: 6px 0 4px; font: 900 26px/.95 var(--display); font-stretch: condensed; text-transform: uppercase; }
+.map-row .card-stamp b { font-size: 26px; }
+
+.map-row .card-stamp small { margin-top: -6px; }
+
+.map-row-text { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+
+.map-row .card-discipline { grid-area: auto; line-height: 1; }
+
+.map-name { margin: 6px 0 5px; font: 900 22px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
 
 .map-name a { text-decoration: none; }
 
-.map-when { margin: 0; font-weight: 700; }
+.map-when { margin: 0; font-size: 14px; font-weight: 600; color: var(--muted); }
 
-/* As tall as the window allows: a fixed minimum would cut the card off on a phone held sideways. */
+.map-row .card-meta {
+  grid-area: auto;
+  align-self: auto;
+  justify-content: flex-start;
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
 .map-stage { position: sticky; top: 76px; height: calc(100vh - 96px); min-height: 240px; border-radius: 16px; overflow: hidden; }
 
 #map { position: absolute; inset: 0; background: var(--panel); }
