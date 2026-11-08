@@ -174,8 +174,9 @@
     close.addEventListener("click", function () { card.hidden = true; select(null); });
     add("span", "card-discipline", row.querySelector(".card-discipline").textContent);
     add("strong", "map-card-name", row.querySelector(".map-name").textContent);
+    var registration = row.querySelector(".card-registration");
     add("span", "map-card-meta", row.querySelector(".map-when").textContent + " · " + row.querySelector(".map-city").textContent +
-      " · " + row.querySelector(".map-price").textContent);
+      " · " + row.querySelector(".map-price").textContent + (registration ? " · " + registration.textContent : ""));
     var link = add("a", "map-card-link", card.dataset.see + " →");
     link.href = row.querySelector(".map-name a").getAttribute("href");
     card.className = "d-" + row.dataset.discipline;

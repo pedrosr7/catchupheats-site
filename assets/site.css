@@ -543,6 +543,12 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .instagram:hover { background: var(--accent); color: var(--ink); }
 
+.organizer, .registration { margin: 6px 0 0; color: var(--muted); }
+
+.card-meta .card-registration { border-color: var(--accent); color: var(--paper); }
+
+.card-link:hover .card-meta .card-registration { border-color: var(--ink); color: var(--ink); }
+
 .checked { color: var(--muted); font-size: 13px; }
 
 .back {
