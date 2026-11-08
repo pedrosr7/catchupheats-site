@@ -550,16 +550,6 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 @media (min-width: 1000px) {
   /* 190px is the most «ningún heat» takes in the 1048px column, in the narrowest of the fallback faces. */
   .hero h1 { font-size: clamp(168px, 15vw, 190px); }
-  .month { display: grid; grid-template-columns: 1fr 1fr; column-gap: 40px; }
-  .month h2 { grid-column: 1 / -1; }
-  .card { border-top: 0; border-bottom: 1px solid var(--line); }
-  .card-link::before { inset: 0 -12px; }
-  /* Half the column is too narrow for chips beside the name: back to the stacked card. */
-  .card-link {
-    grid-template-columns: 76px 1fr;
-    grid-template-areas: "stamp discipline" "stamp name" "stamp dates" "stamp meta";
-  }
-  .card-meta { align-self: auto; justify-content: flex-start; margin: 8px 0 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
