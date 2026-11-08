@@ -35,6 +35,8 @@
       }
       [Math.floor(left / 86400), Math.floor(left % 86400 / 3600), Math.floor(left % 3600 / 60), left % 60].forEach(function (n, i) {
         units[i].textContent = pad(n);
+        // A count of 100 days or more takes three digits: a smaller size keeps them inside the box.
+        units[i].parentNode.classList.toggle("wide", n > 99);
       });
       stat.hidden = true;
       clock.hidden = false;
