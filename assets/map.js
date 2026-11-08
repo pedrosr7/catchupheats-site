@@ -45,7 +45,7 @@
     });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.AttributionControl({ compact: true }), "top-left");
-    map.on("moveend", spread);
+    map.on("moveend", gather);
     // Zoomed out past Spain the pins spread over the whole world: the map stops at Spain, the Canaries included, at
     // whatever size the window has.
     var spain = [[-18.4, 27.5], [4.6, 44.0]];
@@ -110,30 +110,78 @@
     markers[row.dataset.id] = { el: el, row: row, marker: marker };
   });
 
-  // Pins closer on screen than a finger's width step aside to the nearest free spot round their place: six spots on a
-  // first ring, twelve on the next, and so on, so two towns side by side, or many competitions in one city, can all be
-  // tapped. Run again whenever the view moves.
-  var NEAR = 24;
-  function free(x, y, taken) {
-    return taken.every(function (q) { return Math.abs(q[0] - x) >= NEAR || Math.abs(q[1] - y) >= NEAR; });
-  }
-  function spread() {
-    var taken = [];
+  // Pins closer on screen than a finger's width gather in a circle that counts them, at the middle of their places; a
+  // pin on its own always stands on its place. Tapping a circle zooms in until they part. Run again whenever the view
+  // moves or the dates change.
+  var NEAR = 32;
+  // A pin stands above its point: groups are measured from the middle of its body, where a circle would sit.
+  var BODY = 15;
+  var circles = [];
+  // Competitions placed at their city share one point and never part by zooming: a tap on their circle lists them in
+  // the card instead, and no pin ever leaves its place.
+  var SAME_PLACE = 0.002;
+  function gather() {
+    circles.forEach(function (c) { c.marker.remove(); });
+    circles = [];
+    var groups = [];
     Object.keys(markers).forEach(function (id) {
       var m = markers[id];
+      m.el.classList.remove("gathered");
       if (m.el.hidden) return;
-      var p = map.project(m.marker.getLngLat());
-      var offset = [0, 0];
-      for (var ring = 1; !free(p.x + offset[0], p.y + offset[1], taken) && ring < 8; ring++) {
-        var slots = 6 * ring;
-        for (var i = 0; i < slots; i++) {
-          var angle = 2 * Math.PI * i / slots;
-          var spot = [Math.round(Math.cos(angle) * NEAR * ring), Math.round(Math.sin(angle) * NEAR * ring)];
-          if (free(p.x + spot[0], p.y + spot[1], taken)) { offset = spot; break; }
+      var at = map.project(m.marker.getLngLat()), p = { x: at.x, y: at.y - BODY };
+      var near = groups.filter(function (g) { return Math.abs(g.x - p.x) < NEAR && Math.abs(g.y - p.y) < NEAR; })[0];
+      if (near) {
+        near.members.push(m);
+        near.x = (near.x * (near.members.length - 1) + p.x) / near.members.length;
+        near.y = (near.y * (near.members.length - 1) + p.y) / near.members.length;
+      } else {
+        groups.push({ x: p.x, y: p.y, members: [m] });
+      }
+    });
+    // Two groups whose middles drifted close are one: repeat until none are.
+    for (var merged = true; merged;) {
+      merged = false;
+      for (var i = 0; i < groups.length && !merged; i++) {
+        for (var j = i + 1; j < groups.length && !merged; j++) {
+          var a = groups[i], b = groups[j];
+          if (Math.abs(a.x - b.x) >= NEAR || Math.abs(a.y - b.y) >= NEAR) continue;
+          var n = a.members.length + b.members.length;
+          a.x = (a.x * a.members.length + b.x * b.members.length) / n;
+          a.y = (a.y * a.members.length + b.y * b.members.length) / n;
+          a.members = a.members.concat(b.members);
+          groups.splice(j, 1);
+          merged = true;
         }
       }
-      m.marker.setOffset(offset);
-      taken.push([p.x + offset[0], p.y + offset[1]]);
+    }
+    groups.forEach(function (g) {
+      g.members.forEach(function (m) { m.marker.setOffset([0, 0]); });
+      if (g.members.length === 1) return;
+      g.members.forEach(function (m) { m.el.classList.add("gathered"); });
+      var el = document.createElement("button");
+      el.type = "button";
+      el.className = "map-cluster";
+      el.dataset.count = String(g.members.length);
+      el.textContent = String(g.members.length);
+      var bounds = new maplibregl.LngLatBounds();
+      g.members.forEach(function (m) { bounds.extend(m.marker.getLngLat()); });
+      el.addEventListener("click", function (event) {
+        event.stopPropagation();
+        var ne = bounds.getNorthEast(), sw = bounds.getSouthWest();
+        if (ne.lng - sw.lng < SAME_PLACE && ne.lat - sw.lat < SAME_PLACE) {
+          list(g.members);
+          return;
+        }
+        var camera = map.cameraForBounds(bounds, { padding: 80, maxZoom: 14 });
+        var zoom = Math.max(camera ? camera.zoom : 0, map.getZoom() + 2);
+        map.jumpTo({ center: bounds.getCenter(), zoom: Math.min(zoom, map.getMaxZoom()) });
+        // The tapped circle is gone with the jump: the keyboard stays on the map, not on the page's top.
+        map.getCanvas().focus();
+      });
+      var marker = new maplibregl.Marker({ element: el }).setLngLat(map.unproject([g.x, g.y])).addTo(map);
+      // Set after addTo, which names every marker with the library's generic title.
+      el.setAttribute("aria-label", words.cluster.replace("{n}", g.members.length));
+      circles.push({ marker: marker, members: g.members });
     });
   }
 
@@ -181,6 +229,40 @@
     link.href = row.querySelector(".map-name a").getAttribute("href");
     card.className = "d-" + row.dataset.discipline;
     card.hidden = false;
+  }
+
+  // The card as a list: the competitions that share one place, each opening its own card.
+  function list(members) {
+    select(null);
+    card.textContent = "";
+    card.className = "map-card-list";
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "map-card-close";
+    close.textContent = "×";
+    close.setAttribute("aria-label", words.close);
+    close.addEventListener("click", function () { card.hidden = true; });
+    card.appendChild(close);
+    var heading = document.createElement("strong");
+    heading.className = "map-card-name";
+    heading.textContent = words.place.replace("{n}", members.length).replace("{city}", members[0].row.querySelector(".map-city").textContent);
+    card.appendChild(heading);
+    var items = document.createElement("ul");
+    items.className = "map-card-items";
+    members.slice().sort(function (a, b) { return a.row.dataset.start < b.row.dataset.start ? -1 : 1; }).forEach(function (m) {
+      var item = document.createElement("li");
+      var pick = document.createElement("button");
+      pick.type = "button";
+      pick.className = "map-card-pick d-" + m.row.dataset.discipline;
+      pick.dataset.id = m.row.dataset.id;
+      pick.textContent = m.row.querySelector(".map-name").textContent + " · " + m.row.querySelector(".map-when").textContent;
+      pick.addEventListener("click", function () { select(m.row.dataset.id, false); });
+      item.appendChild(pick);
+      items.appendChild(item);
+    });
+    card.appendChild(items);
+    card.hidden = false;
+    if (map) reveal();
   }
 
   function lastOfMonth(d, add) {
@@ -233,7 +315,7 @@
       framed.forEach(function (r) { bounds.extend([+r.dataset.lng, +r.dataset.lat]); });
       map.fitBounds(bounds, { padding: 60, maxZoom: 9, duration: 0 });
     }
-    if (map) spread();
+    if (map) gather();
   }
 
   var buttons = [].slice.call(ranges.querySelectorAll("[data-range]"));
