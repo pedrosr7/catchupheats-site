@@ -668,6 +668,24 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 #ranges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
 
+#map-disciplines { display: flex; flex-wrap: wrap; gap: 8px; margin: -8px 0 18px; }
+
+#map-disciplines button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--paper);
+  font: 600 13px/1 var(--body);
+  cursor: pointer;
+}
+
+#map-disciplines button.d-crossfit, #map-disciplines button.d-hyrox, #map-disciplines button.d-hybrid,
+#map-disciplines button.d-deka, #map-disciplines button.d-ocr, #map-disciplines button.d-spartan { border-color: var(--accent); }
+
+#map-disciplines button.on { background: var(--paper); color: var(--ink); border-color: var(--paper); }
+
 #ranges button.on { background: var(--paper); color: var(--ink); border-color: var(--paper); }
 
 .range-date { display: flex; align-items: center; gap: 6px; }
@@ -917,9 +935,29 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .made-by { color: var(--muted); }
 
+/* Beside the filters on a wide screen, a row of its own on a phone. */
+#filters .search { flex: 1 1 240px; min-width: 200px; }
+
+/* With the box the bar can outgrow a narrow screen: it wraps rather than hide a filter past the edge. */
+#filters { flex-wrap: wrap; }
+
+#filters .search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--paper);
+  font: 500 16px/1.2 var(--body);
+}
+
+#filters .search input::placeholder { color: var(--muted); }
+
 @media (max-width: 759px) {
   #filters { flex-wrap: wrap; overflow-x: visible; }
   #filters label { flex: 1 1 140px; }
+  #filters .search { flex-basis: 100%; }
   /* Under 16px iOS zooms into a focused select and leaves the page wider than the screen. */
   #filters select { width: 100%; font-size: 16px; }
 }

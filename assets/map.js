@@ -302,15 +302,51 @@
   // The Canaries are 1,700 km away: they widen the view only when they are all there is to show.
   function canary(r) { return +r.dataset.lat < 30; }
 
+  // The discipline chosen, empty for all: it adds to the dates and is kept in the address, like the front page's filters.
+  var chips = document.getElementById("map-disciplines");
+  var chipButtons = chips ? [].slice.call(chips.querySelectorAll("[data-discipline-filter]")) : [];
+  var discipline = new URLSearchParams(location.search).get("discipline") || "";
+  if (!chipButtons.some(function (b) { return b.dataset.disciplineFilter === discipline; })) discipline = "";
+  var dates = [today, null];
+  var emptyDates = null;
+  function pressDiscipline() {
+    chipButtons.forEach(function (b) {
+      var on = b.dataset.disciplineFilter === discipline;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+  chipButtons.forEach(function (button) {
+    button.addEventListener("click", function () {
+      discipline = button.dataset.disciplineFilter;
+      pressDiscipline();
+      // The rest of the address stays: a visit's source, a hash.
+      var params = new URLSearchParams(location.search);
+      if (discipline) params.set("discipline", discipline); else params.delete("discipline");
+      var query = params.toString();
+      try {
+        history.replaceState(null, "", (query ? "?" + query : location.pathname) + location.hash);
+      } catch (e) { /* a page opened from disk */ }
+      apply(dates[0], dates[1]);
+    });
+  });
+  if (chips) chips.hidden = false;
+  pressDiscipline();
+
   function apply(from, to) {
+    dates = [from, to];
     var shown = [];
     rows.forEach(function (row) {
-      var fits = row.dataset.end >= from && (to === null || row.dataset.start <= to);
+      var fits = row.dataset.end >= from && (to === null || row.dataset.start <= to) &&
+        (!discipline || row.dataset.discipline === discipline);
       row.hidden = !fits;
       if (markers[row.dataset.id]) markers[row.dataset.id].el.hidden = !fits;
       if (fits) shown.push(row);
     });
     empty.hidden = shown.length > 0;
+    // Nothing for this discipline is not nothing on these dates.
+    if (!emptyDates) emptyDates = empty.textContent;
+    empty.textContent = discipline ? empty.dataset.filters : emptyDates;
     // A choice the range hides is dropped, so it does not come back highlighted without its card.
     if (!shown.some(function (r) { return r.classList.contains("on"); })) {
       card.hidden = true;

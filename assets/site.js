@@ -79,7 +79,16 @@
     var languageSwitch = document.querySelector(".lang-switch");
     var otherLanguage = languageSwitch && languageSwitch.getAttribute("href");
     var selects = [].slice.call(form.querySelectorAll("select"));
+    var search = form.querySelector("input[name=q]");
     var params = new URLSearchParams(location.search);
+    // Folded as the build folds each card's text: lower case, no accents.
+    function fold(text) { return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+    if (search) {
+      search.value = params.get("q") || "";
+      search.addEventListener("input", function () { apply(true); });
+      // Enter would submit the form and reload the page.
+      form.addEventListener("submit", function (event) { event.preventDefault(); });
+    }
 
     selects.forEach(function (select) {
       var wanted = params.get(select.name);
@@ -99,6 +108,7 @@
         select.value = "";
         mark(select);
       });
+      if (search) search.value = "";
       apply(true);
     });
     // What ended after the build leaves the page for good, before any filter is read.
@@ -122,16 +132,20 @@
     function apply(remember) {
       var wanted = {};
       selects.forEach(function (select) { if (select.value) wanted[select.name] = select.value; });
-      var filtered = Object.keys(wanted).length > 0;
+      var words = search ? fold(search.value).split(/\s+/).filter(Boolean) : [];
+      var filtered = Object.keys(wanted).length > 0 || words.length > 0;
       var shown = 0;
       cards.forEach(function (card) {
-        var fits = Object.keys(wanted).every(function (k) { return card.dataset[k] === wanted[k]; });
+        var text = card.dataset.search || "";
+        var fits = Object.keys(wanted).every(function (k) { return card.dataset[k] === wanted[k]; }) &&
+          words.every(function (w) { return text.indexOf(w) >= 0; });
         card.hidden = !fits;
         if (fits) shown++;
       });
       months.forEach(function (month) { month.hidden = !month.querySelector("article.card:not([hidden])"); });
       empty.hidden = shown > 0 || !filtered;
       none.hidden = cards.length > 0;
+      if (search && search.value.trim()) wanted.q = search.value.trim();
       var query = new URLSearchParams(wanted).toString();
       if (languageSwitch) languageSwitch.setAttribute("href", otherLanguage + (query ? "?" + query : ""));
       if (remember) {
