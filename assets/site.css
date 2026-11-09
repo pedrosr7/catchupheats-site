@@ -521,6 +521,40 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .official:active { transform: scale(.98); }
 
+.aura { margin: 26px 0 8px; padding: 20px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+
+.aura-kicker { color: var(--muted); font: 600 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+
+.aura-title {
+  margin: 10px 0 6px;
+  color: var(--heat);
+  font: 900 44px/.9 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+}
+
+.aura p { margin: 8px 0 14px; font-size: 16px; line-height: 1.45; }
+
+.aura-actions { display: grid; gap: 8px; }
+
+.aura-cta, .aura-ghost {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font: 900 18px/1 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.aura-cta { background: var(--paper); color: var(--ink); }
+
+.aura-ghost { border: 1px solid var(--paper); color: var(--paper); }
+
+.aura .aura-fine { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+
 .share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 22px 0 10px; }
 
 .share-heading {
