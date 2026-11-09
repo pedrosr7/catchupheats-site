@@ -372,22 +372,31 @@
       b.setAttribute("aria-pressed", String(b === button));
     });
   }
+  // An iPhone draws an empty date field with no text at all: the stylesheet shows a hint while this mark is on.
+  function markEmpty(input) { input.parentNode.toggleAttribute("data-empty", !input.value); }
   buttons.forEach(function (button) {
     button.addEventListener("click", function () {
       press(button);
       fromInput.value = "";
       toInput.value = "";
+      markEmpty(fromInput);
+      markEmpty(toInput);
       var r = range(button.dataset.range);
       apply(r[0], r[1]);
     });
   });
   [fromInput, toInput].forEach(function (input) {
+    input.addEventListener("input", function () { markEmpty(input); });
     input.addEventListener("change", function () {
+      markEmpty(input);
       press(null);
       var from = fromInput.value && fromInput.value > today ? fromInput.value : today;
       apply(from, toInput.value || null);
     });
   });
+  // Some browsers still refill the fields on Back before this runs.
+  markEmpty(fromInput);
+  markEmpty(toInput);
   press(ranges.querySelector("[data-range=all]"));
   apply(today, null);
 })();

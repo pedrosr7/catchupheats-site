@@ -21,7 +21,7 @@
     <link href="../../assets/icons/icon-192.png?v=6fd01f5309" rel="icon" sizes="192x192">
     <link href="../../assets/icons/apple-touch-icon.png?v=67c955e7ad" rel="apple-touch-icon">
     <link href="../../assets/vendor/maplibre-gl.css?v=576b085fdd" rel="stylesheet">
-    <link href="../../assets/site.css?v=6b804ea800" rel="stylesheet">
+    <link href="../../assets/site.css?v=0f6e2169dc" rel="stylesheet">
   <script defer src="https://cloud.umami.is/script.js" data-website-id="0931b9f1-7786-438c-8e66-c724bb9eae81" data-domains="catchupheats.com" data-do-not-track="true"></script></head>
   <body>
     <header class="top"><a href="../../en/" class="brand">CatchUp<span>Heats</span></a>
@@ -30,7 +30,7 @@
     <main>
       <div class="map-page">
         <h1 class="map-title">Where they compete</h1>
-        <form id="ranges" hidden=""><button type="button" data-range="weekend">This weekend</button><button type="button" data-range="month">This month</button><button type="button" data-range="3months">Next 3 months</button><button type="button" class="on" data-range="all">All</button><label class="range-date"><span>From</span><input type="date" name="from"></label><label class="range-date"><span>Until</span><input type="date" name="to"></label></form>
+        <form id="ranges" hidden=""><button type="button" data-range="weekend">This weekend</button><button type="button" data-range="month">This month</button><button type="button" data-range="3months">Next 3 months</button><button type="button" class="on" data-range="all">All</button><label class="range-date"><span>From</span><span class="range-field" data-empty=""><input type="date" name="from" autocomplete="off"><span class="range-hint" aria-hidden="true">Pick a date</span></span></label><label class="range-date"><span>Until</span><span class="range-field" data-empty=""><input type="date" name="to" autocomplete="off"><span class="range-hint" aria-hidden="true">Pick a date</span></span></label></form>
         <div id="map-disciplines" hidden=""><button type="button" class="on" data-discipline-filter="">All disciplines</button><button type="button" class="d-crossfit" data-discipline-filter="crossfit">CrossFit</button><button type="button" class="d-hyrox" data-discipline-filter="hyrox">HYROX</button><button type="button" class="d-hybrid" data-discipline-filter="hybrid">Hybrid</button><button type="button" class="d-deka" data-discipline-filter="deka">DEKA</button><button type="button" class="d-ocr" data-discipline-filter="ocr">OCR</button><button type="button" class="d-spartan" data-discipline-filter="spartan">Spartan</button></div>
         <p class="map-nojs" data-no-webgl="This browser cannot draw the map; here is the list.">The map needs JavaScript; here is the list.</p>
         <div class="map-layout">
@@ -574,7 +574,7 @@
       <p class="fine"><a href="../../en/legal/" class="legal">Legal notice and privacy</a><span class="dot">·</span><a href="https://aura.pampaiter.com/?utm_source=catchupheats" class="made-by">Made by Aura</a></p>
     </footer>
     <script src="../../assets/vendor/maplibre-gl.js?v=be9633c4d8"></script>
-    <script src="../../assets/map.js?v=1e2ac50d59"></script>
+    <script src="../../assets/map.js?v=88d8feb3d9"></script>
     <script src="../../assets/site.js?v=37136e29c1"></script>
   </body>
 </html>

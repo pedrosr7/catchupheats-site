@@ -693,14 +693,48 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 .range-date span { font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
 
 .range-date input {
+  box-sizing: border-box;
+  min-width: 150px;
+  min-height: 44px;
   font: 600 16px/1.2 var(--body);
   color: var(--paper);
   background: var(--raise);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 9px 14px;
+  text-align: left;
   color-scheme: dark;
 }
+
+/* An iPhone draws an empty date field with no text at all, not even the format: the pill says what to do instead. */
+.range-field { position: relative; display: inline-flex; }
+
+.range-date .range-hint {
+  display: none;
+  position: absolute;
+  inset: 0 14px;
+  align-items: center;
+  font: 600 16px/1.2 var(--body);
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.range-date .range-field[data-empty] .range-hint { display: flex; }
+
+.range-field[data-empty] input { color: transparent; }
+
+/*
+ * With a mouse and keyboard the date is typed in the field, so its own text comes back while it has focus. On a phone the
+ * field can keep focus after its picker closes with nothing chosen, and the hint has to stay.
+ */
+@media (pointer: fine) {
+  .range-date .range-field[data-empty]:focus-within .range-hint { display: none; }
+  .range-field[data-empty]:focus-within input { color: var(--paper); }
+}
+
+.range-date input::-webkit-date-and-time-value { text-align: left; }
 
 .map-nojs, #map-empty { color: var(--muted); }
 
