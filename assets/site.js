@@ -1,4 +1,5 @@
-// Filters and countdown. Without this script every upcoming card shows and the countdown is the one written at build.
+// Filters, the calendar view and the countdown. Without this script every upcoming card shows as a list and the countdown
+// is the one written at build.
 (function () {
   "use strict";
 
@@ -81,6 +82,7 @@
     var selects = [].slice.call(form.querySelectorAll("select"));
     var search = form.querySelector("input[name=q]");
     var params = new URLSearchParams(location.search);
+    var cal = calendarView(params);
     // Folded as the build folds each card's text: lower case, no accents.
     function fold(text) { return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
     if (search) {
@@ -100,7 +102,11 @@
       }
       if (wanted) select.value = wanted;
       mark(select);
-      select.addEventListener("change", function () { mark(select); apply(true); });
+      select.addEventListener("change", function () {
+        mark(select);
+        if (select.name === "month") cal.goTo(select.value);
+        apply(true);
+      });
     });
     document.getElementById("reset").addEventListener("click", function () {
       selects.forEach(function (select) {
@@ -122,6 +128,9 @@
       return !card.hidden;
     });
     form.hidden = cards.length === 0;
+    // With nothing to come the filters, the switch included, are hidden: a shared calendar address must not strand anyone.
+    if (cards.length === 0) cal.on = false;
+    cal.start(selects, mark, apply);
     apply(false);
 
     // The chosen option carries `selected` too, so the filters read the same in a saved or dumped page.
@@ -135,16 +144,28 @@
       var words = search ? fold(search.value).split(/\s+/).filter(Boolean) : [];
       var filtered = Object.keys(wanted).length > 0 || words.length > 0;
       var shown = 0;
-      cards.forEach(function (card) {
+      function fits(card, keys) {
         var text = card.dataset.search || "";
-        var fits = Object.keys(wanted).every(function (k) { return card.dataset[k] === wanted[k]; }) &&
+        return keys.every(function (k) { return card.dataset[k] === wanted[k]; }) &&
           words.every(function (w) { return text.indexOf(w) >= 0; });
-        card.hidden = !fits;
-        if (fits) shown++;
+      }
+      cards.forEach(function (card) {
+        card.hidden = !fits(card, Object.keys(wanted));
+        if (!card.hidden) shown++;
       });
-      months.forEach(function (month) { month.hidden = !month.querySelector("article.card:not([hidden])"); });
+      // The calendar shows its own month, so the month filter only says which one to open.
+      var inCalendar = cards.filter(function (card) {
+        return fits(card, Object.keys(wanted).filter(function (k) { return k !== "month"; }));
+      });
+      if (cal.on) shown = inCalendar.length;
+      months.forEach(function (month) { month.hidden = cal.on || !month.querySelector("article.card:not([hidden])"); });
       empty.hidden = shown > 0 || !filtered;
       none.hidden = cards.length > 0;
+      cal.draw(inCalendar, cards);
+      if (cal.on) {
+        wanted.view = "calendar";
+        if (cal.day) wanted.day = cal.day;
+      }
       if (search && search.value.trim()) wanted.q = search.value.trim();
       var query = new URLSearchParams(wanted).toString();
       if (languageSwitch) languageSwitch.setAttribute("href", otherLanguage + (query ? "?" + query : ""));
@@ -152,6 +173,154 @@
         try { history.replaceState(null, "", query ? "?" + query : location.pathname); } catch (e) { /* a page opened from disk */ }
       }
     }
+  }
+
+  // The month grid, drawn from the cards the list already holds: a dot per competition on each of its days on a phone,
+  // their names on a wider screen, and the chosen day's cards copied beneath.
+  function calendarView(params) {
+    var section = document.getElementById("calendar");
+    var buttons = [].slice.call(document.querySelectorAll("#filters [data-view]"));
+    var self = { on: false, day: "", goTo: function () {}, draw: function () {}, start: function () {} };
+    if (!section) return self;
+    var d = section.dataset;
+    var names = d.months.split("|"), shorts = d.shortMonths.split("|"), weekdays = d.weekdays.split("|");
+    var grid = section.querySelector(".cal-grid"), title = section.querySelector(".cal-title");
+    var prev = section.querySelector(".cal-prev"), next = section.querySelector(".cal-next");
+    var dayTitle = section.querySelector(".cal-day-title"), nothing = section.querySelector(".cal-nothing");
+    var dayCards = section.querySelector(".cal-day-cards");
+    var thisMonth = today.slice(0, 7);
+    var wantedDay = realDay(params.get("day") || "") ? params.get("day") : "";
+    var month = wantedDay ? wantedDay.slice(0, 7) : realMonth(params.get("month") || "") ? params.get("month") : thisMonth;
+    var monthSelect = null, markSelect = null, redraw = null;
+    self.on = params.get("view") === "calendar";
+    self.day = wantedDay;
+    // A day the visitor picked stays even when a filter empties it; one picked for them is picked again.
+    var chosen = !!wantedDay;
+
+    function count(n) { return n === 1 ? d.one : d.many.replace("{n}", n); }
+    function realMonth(key) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(key); }
+    // A shared address may carry any text: a day counts only if it exists, so 31 November is turned away.
+    function realDay(key) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+      var t = new Date(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1, +key.slice(8, 10)));
+      return t.getUTCFullYear() + "-" + pad(t.getUTCMonth() + 1) + "-" + pad(t.getUTCDate()) === key;
+    }
+    function shift(key, by) {
+      var t = new Date(Date.UTC(+key.slice(0, 4), +key.slice(5, 7) - 1 + by, 1));
+      return t.getUTCFullYear() + "-" + pad(t.getUTCMonth() + 1);
+    }
+    function el(tag, cls, text) {
+      var node = document.createElement(tag);
+      if (cls) node.className = cls;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+    // Only one of these shows, by the width the stylesheet sees.
+    function marks(cls, list, more) {
+      var box = el("span", cls);
+      list.slice(0, 3).forEach(function (card) {
+        var item = el("span", "d-" + card.dataset.discipline);
+        item.appendChild(el("i"));
+        if (cls === "cal-names") item.appendChild(el("b", "", card.querySelector(".card-name").textContent));
+        box.appendChild(item);
+      });
+      if (list.length > 3) box.appendChild(el("em", "", more.replace("{n}", list.length - 3)));
+      return box;
+    }
+    // Paging must not turn into a month filter that the list would keep; a chosen month that no longer shows is let go.
+    function release() {
+      if (!monthSelect || !monthSelect.value || monthSelect.value === month) return;
+      monthSelect.value = "";
+      markSelect(monthSelect);
+    }
+
+    self.start = function (selects, mark, apply) {
+      monthSelect = selects.filter(function (s) { return s.name === "month"; })[0] || null;
+      markSelect = mark;
+      redraw = apply;
+      buttons.forEach(function (button) {
+        button.addEventListener("click", function () {
+          self.on = button.dataset.view === "calendar";
+          apply(true);
+        });
+      });
+      [[prev, -1], [next, 1]].forEach(function (pair) {
+        pair[0].addEventListener("click", function () {
+          month = shift(month, pair[1]);
+          self.day = "";
+          chosen = false;
+          release();
+          apply(true);
+          // At the first or last month the arrow just pressed is disabled, and focus would fall back to the page.
+          if (pair[0].disabled) (pair[0] === prev ? next : prev).focus();
+        });
+      });
+    };
+    self.goTo = function (key) {
+      month = realMonth(key) ? key : thisMonth;
+      self.day = "";
+      chosen = false;
+    };
+    self.draw = function (matches, all) {
+      buttons.forEach(function (b) { b.setAttribute("aria-pressed", String((b.dataset.view === "calendar") === self.on)); });
+      section.hidden = !self.on;
+      if (!self.on) return;
+      var last = all.reduce(function (max, card) { return card.dataset.end.slice(0, 7) > max ? card.dataset.end.slice(0, 7) : max; }, thisMonth);
+      if (month < thisMonth) month = thisMonth;
+      if (month > last) month = last;
+      var y = +month.slice(0, 4), m = +month.slice(5, 7);
+      title.textContent = names[m - 1] + " " + y;
+      prev.disabled = month <= thisMonth;
+      next.disabled = month >= last;
+      function on(date) { return matches.filter(function (c) { return c.dataset.start <= date && date <= c.dataset.end; }); }
+      var days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+      if (!chosen && self.day && !on(self.day).length) self.day = "";
+      if (!self.day || self.day.slice(0, 7) !== month) {
+        self.day = "";
+        for (var k = 1; k <= days && !self.day; k++) {
+          var date = month + "-" + pad(k);
+          if (date >= today && on(date).length) self.day = date;
+        }
+      }
+      grid.textContent = "";
+      var lead = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+      for (var i = 0; i < lead; i++) grid.appendChild(el("span", "cal-cell empty"));
+      for (var n = 1; n <= days; n++) (function (n) {
+        var date = month + "-" + pad(n), list = on(date);
+        var cell = el("button", "cal-cell" + (date < today ? " past" : "") + (date === today ? " today" : ""));
+        cell.type = "button";
+        cell.dataset.day = date;
+        cell.setAttribute("aria-pressed", String(date === self.day));
+        var weekday = weekdays[(new Date(Date.UTC(y, m - 1, n)).getUTCDay() + 6) % 7];
+        cell.setAttribute("aria-label", weekday + " " + n + " " + names[m - 1] + " " + y + ": " + count(list.length));
+        cell.appendChild(el("span", "cal-num", String(n)));
+        cell.appendChild(marks("cal-dots", list, "+{n}"));
+        cell.appendChild(marks("cal-names", list, d.more));
+        cell.addEventListener("click", function () {
+          self.day = date;
+          chosen = true;
+          redraw(true);
+          // The grid was drawn anew, so the button that had focus is gone: give it to its replacement.
+          grid.querySelector("[data-day='" + date + "']").focus();
+        });
+        grid.appendChild(cell);
+      })(n);
+      var picked = self.day ? on(self.day) : [];
+      dayTitle.hidden = !self.day;
+      if (self.day) {
+        var t = new Date(Date.UTC(y, m - 1, +self.day.slice(8, 10)));
+        dayTitle.textContent = weekdays[(t.getUTCDay() + 6) % 7] + " " + t.getUTCDate() + " " + shorts[m - 1] + " · " + count(picked.length);
+      }
+      nothing.hidden = !self.day || picked.length > 0;
+      dayCards.textContent = "";
+      picked.forEach(function (card) {
+        var copy = card.cloneNode(true);
+        copy.hidden = false;
+        copy.style.animation = "none";
+        dayCards.appendChild(copy);
+      });
+    };
+    return self;
   }
 
   function refresh(el) {
