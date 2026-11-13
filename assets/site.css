@@ -585,6 +585,9 @@ select:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid
 
 .checked { color: var(--muted); font-size: 13px; }
 
+/* A cancelled or postponed competition says so where the countdown would be, as loud as a stamp. */
+.detail .status { display: inline-block; margin: 8px 0; padding: 6px 12px; border: 2px solid var(--accent); font-weight: 700; }
+
 .back {
   display: inline-block;
   margin-top: 14px;

@@ -145,6 +145,15 @@
       [].forEach.call(select.options, function (o) { o.defaultSelected = o.value === select.value; });
     }
 
+    function once(list) {
+      var seen = {};
+      return list.filter(function (card) {
+        if (seen[card.dataset.id]) return false;
+        seen[card.dataset.id] = true;
+        return true;
+      });
+    }
+
     function apply(remember) {
       var wanted = {};
       selects.forEach(function (select) { if (select.value) wanted[select.name] = select.value; });
@@ -168,7 +177,8 @@
       months.forEach(function (month) { month.hidden = cal.on || !month.querySelector("article.card:not([hidden])"); });
       empty.hidden = shown > 0 || !filtered;
       none.hidden = cards.length > 0;
-      cal.draw(inCalendar, cards);
+      // A competition across the turn of a month has a card under each month: the calendar draws it once.
+      cal.draw(once(inCalendar), once(cards));
       if (cal.on) {
         wanted.view = "calendar";
         if (cal.day) wanted.day = cal.day;
