@@ -1,5 +1,6 @@
-// Filters, the calendar view and the countdown. Without this script every upcoming card shows as a list and the countdown
-// is the one written at build.
+// Filters, the calendar view and the countdown, and on every page that lists competitions the day is the visitor's: what
+// ended since the build is hidden. Without this script every card shows as a list and the countdown is the one written at
+// build.
 (function () {
   "use strict";
 
@@ -15,6 +16,7 @@
 
   var form = document.getElementById("filters");
   if (form) listing(form);
+  else leftovers();
   var countdown = document.querySelector(".countdown");
   if (countdown) refresh(countdown);
   var clock = document.querySelector(".next-clock");
@@ -127,6 +129,11 @@
       card.hidden = card.dataset.end < today;
       return !card.hidden;
     });
+    // A month whose every card ended is no longer a choice, unless a shared address asks for it.
+    [].forEach.call(form.querySelectorAll("select[name=month] option"), function (o) {
+      if (o.value && !o.selected && !cards.some(function (card) { return card.dataset.month === o.value; })) o.remove();
+    });
+    nextStart(cards);
     form.hidden = cards.length === 0;
     // With nothing to come the filters, the switch included, are hidden: a shared calendar address must not strand anyone.
     if (cards.length === 0) cal.on = false;
@@ -173,6 +180,79 @@
         try { history.replaceState(null, "", query ? "?" + query : location.pathname); } catch (e) { /* a page opened from disk */ }
       }
     }
+  }
+
+  // The hero names the build's next start; once that one has started, the first card still to start takes its place.
+  function nextStart(cards) {
+    var hero = document.querySelector("a.next");
+    if (!hero || hero.querySelector(".next-clock").dataset.start > today) return;
+    var card = cards.filter(function (c) { return c.dataset.start > today; })[0];
+    if (!card) {
+      hero.hidden = true;
+      return;
+    }
+    hero.className = hero.className.replace(/\bd-[\w-]+/, "d-" + card.dataset.discipline);
+    hero.href = card.querySelector("a.card-link").getAttribute("href");
+    hero.querySelector(".next-label").textContent = hero.dataset.tLabel + " · " + card.querySelector(".card-discipline").textContent;
+    hero.querySelector(".next-name").textContent = card.querySelector(".card-name").textContent;
+    hero.querySelector(".next-meta").textContent =
+      card.querySelector(".card-dates").textContent + " · " + card.querySelector(".card-city").textContent;
+    hero.querySelector(".next-clock").dataset.start = card.dataset.start;
+  }
+
+  // Every other page that lists cards (a region's, a discipline's, a month's): what ended since the build goes, and the
+  // questions name the next one from the visitor's day.
+  function leftovers() {
+    var cards = [].slice.call(document.querySelectorAll("article.card"));
+    if (!cards.length) return;
+    var left = cards.filter(function (card) {
+      card.hidden = card.dataset.end < today;
+      return !card.hidden;
+    });
+    [].forEach.call(document.querySelectorAll("section.month"), function (month) {
+      month.hidden = !month.querySelector("article.card:not([hidden])");
+    });
+    var none = document.querySelector(".none");
+    if (none) none.hidden = left.length > 0;
+    // The words written for the day the visitor is on: counts and years follow what is left.
+    [].forEach.call(document.querySelectorAll("[data-variants]"), function (el) {
+      var text = later(el, "data-variants");
+      if (text !== null) el.textContent = text;
+      el.hidden = text === null;
+      if (el.tagName === "DD") el.previousElementSibling.hidden = el.hidden;
+    });
+    var heading = document.querySelector("h1[data-titles]");
+    if (heading && later(heading, "data-titles") !== null) document.title = later(heading, "data-titles");
+    [].forEach.call(document.querySelectorAll("dd[data-nexts]"), function (dd) {
+      var next = JSON.parse(dd.dataset.nexts).filter(function (pair) { return pair[0] > today; })[0];
+      if (next) dd.textContent = next[1];
+      dd.hidden = !next;
+      dd.previousElementSibling.hidden = !next;
+    });
+    faqMarkup();
+  }
+
+  // An element's text for the visitor's day: the first version whose end is not past, or its words for nothing left.
+  function later(el, attribute) {
+    var hit = JSON.parse(el.getAttribute(attribute)).filter(function (pair) { return pair[0] >= today; })[0];
+    return hit ? hit[1] : el.getAttribute(attribute + "-none");
+  }
+
+  // The FAQ markup says what the questions on the page now say, and goes when none is left.
+  function faqMarkup() {
+    var questions = [].filter.call(document.querySelectorAll(".faq dt"), function (dt) { return !dt.hidden; });
+    var faq = document.querySelector(".faq");
+    if (faq) faq.hidden = questions.length === 0;
+    [].forEach.call(document.querySelectorAll('script[type="application/ld+json"]'), function (script) {
+      var data;
+      try { data = JSON.parse(script.textContent); } catch (e) { return; }
+      if (data["@type"] !== "FAQPage") return;
+      if (!questions.length) return script.remove();
+      data.mainEntity = questions.map(function (dt) {
+        return { "@type": "Question", name: dt.textContent, acceptedAnswer: { "@type": "Answer", text: dt.nextElementSibling.textContent } };
+      });
+      script.textContent = JSON.stringify(data);
+    });
   }
 
   // The month grid, drawn from the cards the list already holds: a dot per competition on each of its days on a phone,
