@@ -1112,3 +1112,130 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   .cal-names span { display: flex; align-items: center; gap: 6px; min-width: 0; }
   .cal-names b { min-width: 0; overflow: hidden; font: 600 12px/1.25 var(--body); white-space: nowrap; text-overflow: ellipsis; }
 }
+
+/* The plan page: the questions of «Que Aura me prepare», one screen at a time, then the summary. */
+
+.plan-lede { margin: 18px 0 14px; color: var(--muted); }
+
+.plan-started { margin: 24px 0; font: 900 26px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.plan-progress { height: 4px; margin: 0 0 24px; border-radius: 2px; background: var(--line); overflow: hidden; }
+
+.plan-progress span { display: block; width: 0; height: 100%; background: var(--accent, var(--heat)); transition: width .35s var(--ease-out); }
+
+.plan .plan-step h2 {
+  margin: 0 0 8px;
+  color: var(--paper);
+  font: 900 clamp(30px, 8.5vw, 52px)/.95 var(--display);
+  font-stretch: condensed;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.plan .plan-step h3 { margin: 20px 0 10px; font: 600 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+.plan-subtitle { margin: 0 0 18px; color: var(--muted); }
+
+.plan-options { display: grid; gap: 8px; margin: 0 0 14px; }
+
+.plan-days { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 8px; }
+
+.plan-durations { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.plan-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  cursor: pointer;
+  transition: border-color .2s, background .2s, transform .15s var(--ease-out);
+}
+
+/* The real input stays over the whole card, so a tap anywhere on it answers. */
+.plan-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+
+.plan-option.on { border-color: var(--accent, var(--heat)); background: var(--raise); }
+
+.plan-option:has(input:focus-visible) { outline: 2px solid var(--heat); outline-offset: 3px; }
+
+.plan-option:active { transform: scale(.98); }
+
+.plan-label { font: 900 20px/1.1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.plan-sub { color: var(--muted); font-size: 14px; line-height: 1.35; }
+
+.plan-days .plan-option { align-items: center; padding: 14px 0; }
+
+.plan-days .plan-label { font-size: 15px; }
+
+.plan-days-hint { margin: 0 0 6px; color: var(--muted); font: 600 12px/1.3 var(--mono); }
+
+.plan-hardest-hint { min-height: 1.4em; margin: 0 0 6px; color: var(--muted); font: 600 12px/1.3 var(--mono); }
+
+.plan [tabindex="-1"]:focus { outline: none; }
+
+.plan-nav { display: flex; gap: 10px; margin: 24px 0 8px; }
+
+.plan-back, .plan-next {
+  padding: 14px 20px;
+  border: 1px solid var(--paper);
+  border-radius: 12px;
+  background: none;
+  color: var(--paper);
+  font: 900 18px/1 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.plan-next { flex: 1; background: var(--paper); color: var(--ink); }
+
+.plan-next:disabled { opacity: .35; cursor: not-allowed; }
+
+.plan-weeks {
+  margin: 4px 0 22px;
+  color: var(--accent, var(--heat));
+  font: 900 clamp(40px, 11vw, 72px)/.9 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+}
+
+.plan-phases, .plan-week { display: grid; gap: 8px; margin: 0 0 8px; padding: 0; list-style: none; }
+
+.plan-phases li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 12px;
+  row-gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-left: 6px solid var(--accent, var(--heat));
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.plan-phase-name { font: 900 20px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.plan-phase-length { align-self: center; color: var(--muted); font: 600 12px/1 var(--mono); text-transform: uppercase; }
+
+.plan-phase-text { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+
+.plan-note { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+
+.plan-week li { display: flex; gap: 14px; align-items: baseline; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; }
+
+.plan-day { min-width: 44px; color: var(--accent, var(--heat)); font: 900 18px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.plan-action { margin: 22px 0 8px; }
+
+.plan-qr { display: grid; justify-items: start; gap: 10px; }
+
+.plan-qr svg { width: min(280px, 100%); height: auto; border-radius: 12px; }
+
+.plan-qr-hint { margin: 0; color: var(--muted); }
+
+.plan .aura-fine { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
