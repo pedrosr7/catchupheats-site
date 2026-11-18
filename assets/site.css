@@ -1113,6 +1113,59 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   .cal-names b { min-width: 0; overflow: hidden; font: 600 12px/1.25 var(--body); white-space: nowrap; text-overflow: ellipsis; }
 }
 
+/* The judge's page: the code from the link, big enough to read off the phone and type into the app. */
+
+.judge { max-width: 560px; padding: 32px 0; }
+
+.judge-kicker { margin: 0; color: var(--heat); font: 600 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+
+.judge h1 {
+  margin: 12px 0 24px;
+  font: 900 clamp(44px, 12vw, 80px)/.9 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+}
+
+.judge-box { margin: 0 0 24px; padding: 20px 18px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); }
+
+.judge-label { margin: 0 0 10px; color: var(--muted); font: 600 11px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+
+.judge-code {
+  margin: 0 0 16px;
+  color: var(--heat);
+  font: 700 clamp(44px, 14vw, 72px)/1 var(--mono);
+  letter-spacing: .12em;
+  overflow-wrap: normal;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.judge-copy {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 900 20px/1 var(--display);
+  font-stretch: condensed;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--ease-out);
+}
+
+.judge-copy:hover { background: var(--heat); }
+
+.judge-copy:active { transform: scale(.98); }
+
+.judge-invalid { margin: 0 0 24px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); }
+
+.judge-steps { margin: 0 0 20px; font-size: 18px; }
+
+.judge-stores { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+
+.judge-stores li { padding: 8px 14px; border: 1px dashed var(--line); border-radius: 999px; color: var(--muted); }
+
 /* The plan page: the questions of «Que Aura me prepare», one screen at a time, then the summary. */
 
 .plan-lede { margin: 18px 0 14px; color: var(--muted); }
