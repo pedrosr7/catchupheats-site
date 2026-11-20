@@ -23,6 +23,8 @@
   // From the day before it starts to a week after it ends: the rest of the year nobody runs it live.
   var BEFORE_DAYS = 1;
   var AFTER_DAYS = 7;
+  // The standings view is kept in this browser only; a private window or blocked storage falls back to the list.
+  var VIEW_KEY = "catchupheats.live.view";
 
   var data = panel.dataset;
   if (!within(data.start, data.end)) return;
@@ -44,6 +46,25 @@
   var anchored = false;
   var gaveUpAt = 0;
   var drawn = "";
+  var latest = null;
+  var view = remembered();
+  var category = null;
+
+  function remembered() {
+    try {
+      return window.localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list";
+    } catch (e) {
+      return "list";
+    }
+  }
+
+  function remember(name) {
+    try {
+      window.localStorage.setItem(VIEW_KEY, name);
+    } catch (e) {
+      // Nothing to keep it in: the choice lasts this visit.
+    }
+  }
 
   function t(key) { return panel.getAttribute("data-t-" + key) || ""; }
 
@@ -174,14 +195,23 @@
   function draw(live) {
     var said = live.now.map(function (heat) { return heat.wodName + " · " + heat.categoryName + " · " + heatState(heat.status); })
       .join(" / ") || t("nothing");
-    // Only a change is announced: the region is polite, and the same words every 5 s would be noise.
+    // Only a change is announced: the region is polite, and the same words every 5 s would be noise. With no heat on
+    // the floor this line is the only place that says so.
     if (status.textContent !== said) status.textContent = said;
-    var key = JSON.stringify([live.now, live.next, live.standings]);
+    latest = live;
+    var key = JSON.stringify([live.now, live.next, live.standings, view, category]);
     if (key === drawn) return tickClocks();
+    paint();
+  }
+
+  // Draws the latest answer with the visitor's view and category: on a new answer, and at once on a press.
+  function paint() {
+    var live = latest;
     var parts = document.createDocumentFragment();
-    parts.appendChild(el("h2", null, t("now")));
-    if (live.now.length) live.now.forEach(function (heat) { parts.appendChild(heatBlock(heat)); });
-    else parts.appendChild(el("p", "live-empty", t("nothing")));
+    if (live.now.length) {
+      parts.appendChild(el("h2", null, t("now")));
+      live.now.forEach(function (heat) { parts.appendChild(heatBlock(heat)); });
+    }
     if (live.next.length) {
       parts.appendChild(el("h2", null, t("next")));
       var list = el("ol", "next-heats");
@@ -189,19 +219,20 @@
       parts.appendChild(list);
     }
     // The live server lists every category: one with no published WOD or no one in it has nothing to rank yet.
-    var ranked = live.standings.filter(function (category) {
-      return (category.wodNames || []).length && (category.standings || []).length;
+    var ranked = live.standings.filter(function (one) {
+      return (one.wodNames || []).length && (one.standings || []).length;
     });
     if (ranked.length) {
+      var chosen = ranked.filter(function (one) { return one.categoryName === category; })[0] || ranked[0];
+      category = chosen.categoryName;
       parts.appendChild(el("h2", null, t("standings")));
-      ranked.forEach(function (category) { parts.appendChild(standings(category)); });
-      parts.appendChild(el("p", "live-note", t("note")));
+      parts.appendChild(standings(ranked, chosen));
     }
     var kept = keep();
     while (body.firstChild) body.removeChild(body.firstChild);
     body.appendChild(parts);
     restore(kept);
-    drawn = key;
+    drawn = JSON.stringify([live.now, live.next, live.standings, view, category]);
     tickClocks();
   }
 
@@ -216,10 +247,11 @@
   }
 
   function restore(kept) {
-    [].forEach.call(body.querySelectorAll(".table-wrap"), function (wrap) {
-      var left = kept.scrolled[wrap.getAttribute("data-key")];
-      if (left) wrap.scrollLeft = left;
-      if (kept.focused !== null && wrap.getAttribute("data-key") === kept.focused) wrap.focus({ preventScroll: true });
+    [].forEach.call(body.querySelectorAll("[data-key]"), function (node) {
+      var key = node.getAttribute("data-key");
+      var left = kept.scrolled[key];
+      if (left) node.scrollLeft = left;
+      if (kept.focused !== null && key === kept.focused) node.focus({ preventScroll: true });
     });
   }
 
@@ -228,7 +260,8 @@
     var title = el("p", "heat-title");
     title.appendChild(el("span", "heat-name", heat.wodName + " · " + heat.categoryName));
     title.appendChild(el("span", "heat-state", heatState(heat.status)));
-    if (heat.status === "RUNNING" && typeof heat.startedAtMs === "number") {
+    var running = heat.status === "RUNNING" && typeof heat.startedAtMs === "number";
+    if (running) {
       var clock = el("span", "live-clock");
       clock.setAttribute("data-started", heat.startedAtMs);
       if (typeof heat.capSeconds === "number") clock.setAttribute("data-cap", heat.capSeconds);
@@ -237,7 +270,18 @@
       title.appendChild(clock);
     }
     block.appendChild(title);
-    if (typeof heat.capSeconds === "number") block.appendChild(el("p", "heat-cap", t("cap").replace("{time}", seconds(heat.capSeconds))));
+    if (typeof heat.capSeconds === "number") {
+      var cap = t("cap").replace("{time}", seconds(heat.capSeconds));
+      if (running) {
+        var gone = el("progress", "heat-progress");
+        gone.max = heat.capSeconds;
+        gone.value = 0;
+        gone.setAttribute("data-started", heat.startedAtMs);
+        gone.setAttribute("aria-label", cap);
+        block.appendChild(gone);
+      }
+      block.appendChild(el("p", "heat-cap", cap));
+    }
     var phases = heat.phases || [];
     var lanes = el("ol", "lanes");
     byRank(heat.lanes || []).forEach(function (lane) { lanes.appendChild(laneItem(lane, phases.length)); });
@@ -283,42 +327,120 @@
     var item = el("li");
     var head = el("p", "next-title");
     if (typeof heat.scheduledAtMs === "number") head.appendChild(el("time", "next-time", clockTime(heat.scheduledAtMs, true)));
-    head.appendChild(el("span", null, heat.wodName + " · " + heat.categoryName));
+    head.appendChild(el("span", "next-heat-name", heat.wodName + " · " + heat.categoryName));
     item.appendChild(head);
-    var names = byLane(heat.lanes || []).map(function (lane) { return lane.lane + " " + lane.entryName; });
-    if (names.length) item.appendChild(el("p", "next-lanes", names.join(" · ")));
+    var names = byLane(heat.lanes || []).map(function (lane) { return lane.entryName; });
+    if (names.length) item.appendChild(el("p", "next-lanes", who(names)));
     return item;
   }
 
-  function standings(category) {
+  // Whole names only: «Ana, Bea y Carla», and past three «Ana, Bea y 4 más».
+  function who(names) {
+    var and = " " + t("and") + " ";
+    if (names.length <= 3) return names.length === 1 ? names[0] : names.slice(0, -1).join(", ") + and + names[names.length - 1];
+    return names.slice(0, 2).join(", ") + and + t("more").replace("{n}", names.length - 2);
+  }
+
+  function standings(ranked, chosen) {
     var box = el("section", "standings");
-    var heading = el("h3", null, category.categoryName);
-    box.appendChild(heading);
+    var bar = el("div", "standings-bar");
+    var chips = el("div", "category-chips");
+    chips.setAttribute("role", "group");
+    chips.setAttribute("aria-label", t("categories"));
+    ranked.forEach(function (one) {
+      chips.appendChild(toggle("category:" + one.categoryName, one.categoryName, one === chosen, function () {
+        category = one.categoryName;
+      }));
+    });
+    bar.appendChild(chips);
+    var views = el("div", "view-switch");
+    views.setAttribute("role", "group");
+    views.setAttribute("aria-label", t("view"));
+    ["list", "table"].forEach(function (name) {
+      views.appendChild(toggle("view:" + name, t(name), view === name, function () {
+        view = name;
+        remember(name);
+      }));
+    });
+    bar.appendChild(views);
+    box.appendChild(bar);
+    // The server ranks everyone 1 before any result: that is no position yet.
+    var blank = chosen.standings.every(function (row) {
+      return !row.points && (row.wods || []).every(function (score) { return !score; });
+    });
+    box.appendChild(view === "table" ? table(chosen, blank) : list(chosen, blank));
+    box.appendChild(el("p", "live-note", t("note")));
+    return box;
+  }
+
+  function toggle(key, label, on, choose) {
+    var button = el("button", "toggle", label);
+    button.type = "button";
+    button.setAttribute("aria-pressed", on ? "true" : "false");
+    button.setAttribute("data-key", key);
+    button.addEventListener("click", function () {
+      choose();
+      paint();
+    });
+    return button;
+  }
+
+  function place(row, blank) {
+    return el("span", "place" + (!blank && row.rank === 1 ? " lead" : ""), blank ? "–" : String(row.rank));
+  }
+
+  function scoreText(score) {
+    return score ? score.display + " (" + score.points + ")" + (score.provisional ? " *" : "") : "–";
+  }
+
+  function list(category, blank) {
+    var rows = el("ol", "standings-list");
+    category.standings.forEach(function (row) {
+      var item = el("li", "standing");
+      item.appendChild(place(row, blank));
+      var main = el("div", "standing-main");
+      main.appendChild(el("span", "entry", row.entryName));
+      var wods = el("p", "standing-wods");
+      (category.wodNames || []).forEach(function (name, i) {
+        wods.appendChild(el("span", "wod", name + " · " + scoreText((row.wods || [])[i])));
+      });
+      main.appendChild(wods);
+      item.appendChild(main);
+      var total = el("div", "standing-total");
+      total.appendChild(el("span", "points", String(row.points)));
+      if (row.provisional) total.appendChild(el("span", "provisional", t("provisional")));
+      item.appendChild(total);
+      rows.appendChild(item);
+    });
+    return rows;
+  }
+
+  function table(category, blank) {
     // A wide table scrolls inside its own box on a phone; the box takes focus so a keyboard can scroll it too.
     var wrap = el("div", "table-wrap");
     wrap.setAttribute("tabindex", "0");
-    wrap.setAttribute("data-key", category.categoryName);
+    wrap.setAttribute("data-key", "table:" + category.categoryName);
     wrap.setAttribute("role", "region");
     wrap.setAttribute("aria-label", category.categoryName);
-    var table = el("table");
+    var grid = el("table");
     var head = el("tr");
-    [t("place"), t("athlete")].concat(category.wodNames || [], [t("points")]).forEach(function (name) {
-      var th = el("th", null, name);
+    [t("place"), t("athlete")].concat(category.wodNames || [], [t("points")]).forEach(function (name, i, all) {
+      var th = el("th", i === 0 ? "place-head" : i === 1 ? "who" : i === all.length - 1 ? "points-head" : null, name);
       th.setAttribute("scope", "col");
       head.appendChild(th);
     });
-    table.appendChild(el("thead")).appendChild(head);
+    grid.appendChild(el("thead")).appendChild(head);
     var rows = el("tbody");
-    (category.standings || []).forEach(function (row) {
+    category.standings.forEach(function (row) {
       var tr = el("tr");
-      tr.appendChild(el("td", "place", String(row.rank)));
-      var who = el("th", null);
-      who.setAttribute("scope", "row");
-      who.appendChild(el("span", "entry", row.entryName));
-      tr.appendChild(who);
-      (row.wods || []).forEach(function (score) {
-        tr.appendChild(el("td", "wod", score ? score.display + " (" + score.points + ")" + (score.provisional ? " *" : "") : "–"));
-      });
+      var cell = el("td", "place-cell");
+      cell.appendChild(place(row, blank));
+      tr.appendChild(cell);
+      var name = el("th", "who");
+      name.setAttribute("scope", "row");
+      name.appendChild(el("span", "entry", row.entryName));
+      tr.appendChild(name);
+      (row.wods || []).forEach(function (score) { tr.appendChild(el("td", "wod", scoreText(score))); });
       var points = el("td", "points", String(row.points));
       if (row.provisional) {
         points.appendChild(document.createTextNode(" "));
@@ -327,10 +449,9 @@
       tr.appendChild(points);
       rows.appendChild(tr);
     });
-    table.appendChild(rows);
-    wrap.appendChild(table);
-    box.appendChild(wrap);
-    return box;
+    grid.appendChild(rows);
+    wrap.appendChild(grid);
+    return wrap;
   }
 
   // Ranked lanes first, best first; the rest by lane.
@@ -374,6 +495,9 @@
       var cap = clock.getAttribute("data-cap");
       if (cap !== null) elapsed = Math.min(elapsed, +cap);
       clock.textContent = seconds(elapsed);
+    });
+    [].forEach.call(body.querySelectorAll(".heat-progress"), function (bar) {
+      bar.value = Math.min(bar.max, Math.max(0, (now - +bar.getAttribute("data-started")) / 1000));
     });
   }
 

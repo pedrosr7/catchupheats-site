@@ -1336,41 +1336,58 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .live-updated { margin: 18px 0 0; font: 600 11px/1.4 var(--mono); letter-spacing: .08em; color: var(--muted); min-height: 1.4em; }
 
-.heat { margin: 0 0 18px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.live h2 { margin: 22px 0 10px; }
 
-.heat-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 0 0 4px; }
+/* A compact card: the heat in one line, its clock and how much of the cap has gone, then a line per lane. */
+.heat { margin: 0 0 18px; padding: 12px 14px; border: .5px solid var(--line); border-radius: 12px; background: var(--panel); }
 
-.heat-name { font: 900 24px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+.heat-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
 
-.heat-state { font: 600 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent, var(--heat)); }
+.heat-name { font: 900 20px/1.05 var(--display); font-stretch: condensed; text-transform: uppercase; min-width: 0; }
+
+.heat-state { font: 600 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent, var(--heat)); }
 
 /* Tabular digits so the running clock does not shift the line every second. */
-.live-clock { margin-left: auto; font: 900 32px/1 var(--display); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+.live-clock { margin-left: auto; font: 900 28px/1 var(--display); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
 
-.heat-cap { margin: 0 0 10px; font: 600 11px/1.4 var(--mono); color: var(--muted); }
+.heat-progress { display: block; width: 100%; height: 4px; margin: 10px 0 4px; }
+
+.heat-cap { margin: 0 0 4px; font: 600 10px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 
 .lanes { margin: 0; padding: 0; list-style: none; }
 
 .lane {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 2px 10px;
-  padding: 10px 0;
-  border-top: 1px solid var(--line);
+  padding: 7px 0;
+  border-top: .5px solid var(--line);
+  font-size: 14px;
 }
 
-.lane-no { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lane-no { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 
-.lane-name { font-weight: 700; min-width: 0; }
+.lane-name { font-weight: 700; min-width: 0; overflow-wrap: normal; }
 
 .lane-phase, .lane-result { text-align: right; }
 
-.lane-result { font: 900 22px/1 var(--display); font-variant-numeric: tabular-nums; }
+.lane-phase { color: var(--muted); font-size: 13px; }
 
-.lane progress { grid-column: 1 / -1; width: 100%; height: 6px; accent-color: var(--accent, var(--heat)); }
+.lane-result { font: 900 18px/1 var(--display); font-variant-numeric: tabular-nums; }
 
-.splits { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+.lane progress { grid-column: 1 / -1; width: 100%; height: 3px; }
+
+/* Drawn by hand: a native bar this thin loses its fill on some browsers. */
+.live progress { appearance: none; -webkit-appearance: none; border: 0; border-radius: 2px; background: var(--line); color: var(--heat); }
+
+.live progress::-webkit-progress-bar { background: var(--line); border-radius: 2px; }
+
+.live progress::-webkit-progress-value { background: var(--heat); border-radius: 2px; }
+
+.live progress::-moz-progress-bar { background: var(--heat); border-radius: 2px; }
+
+.splits { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 10px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 12px; }
 
 .splits b { color: var(--paper); font-variant-numeric: tabular-nums; }
 
@@ -1391,31 +1408,104 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .next-heats { margin: 0; padding: 0; list-style: none; }
 
-.next-heats li { padding: 10px 0; border-top: 1px solid var(--line); }
+.next-heats li { padding: 9px 0; border-top: .5px solid var(--line); }
 
-.next-title { display: flex; gap: 10px; margin: 0; font-weight: 700; }
+.next-title { display: flex; gap: 10px; margin: 0; font-weight: 700; font-size: 15px; }
 
-.next-time { font-variant-numeric: tabular-nums; color: var(--accent, var(--heat)); }
+.next-time { flex: none; font: 600 14px/1.5 var(--mono); font-variant-numeric: tabular-nums; color: var(--heat); }
 
-.next-lanes { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.next-heat-name { min-width: 0; }
 
-.standings h3 { margin: 18px 0 8px; font: 900 22px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+/* Names whole, never cut mid-word: the list is already short («Ana, Bea y 4 más»). */
+.next-lanes { margin: 2px 0 0; color: var(--muted); font-size: 13px; overflow-wrap: normal; }
 
-/* A wide table scrolls inside its own box on a phone, never the page. */
-.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+/* Standings: one category at a time, as a list or a table. */
+.standings-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; }
+
+.category-chips { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
+
+.view-switch { display: inline-flex; padding: 2px; border: .5px solid var(--line); border-radius: 999px; background: var(--panel); }
+
+.live .toggle {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: .5px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 600 11px/1 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.live .view-switch .toggle { border-color: transparent; }
+
+.live .toggle:hover { color: var(--paper); border-color: var(--paper); }
+
+.live .toggle[aria-pressed="true"] { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+
+.standings-list { margin: 0; padding: 0; list-style: none; border: .5px solid var(--line); border-radius: 12px; background: var(--panel); }
+
+.standing {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-top: .5px solid var(--line);
+}
+
+.standing:first-child { border-top: 0; }
+
+.place {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  border: .5px solid var(--line);
+  border-radius: 8px;
+  font: 600 13px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--paper);
+}
+
+.place.lead { background: var(--heat); border-color: var(--heat); color: var(--ink); }
+
+.standing-main { min-width: 0; }
+
+.standing .entry { display: block; font-weight: 700; overflow-wrap: normal; }
+
+.standing-wods { display: flex; flex-wrap: wrap; gap: 0 12px; margin: 2px 0 0; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+.standing-total { display: grid; justify-items: end; gap: 4px; }
+
+.standing .points { font: 900 26px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+/* A wide table scrolls inside its own box on a phone, never the page; position, name and points stay put. */
+.table-wrap { max-width: 100%; overflow-x: auto; border: .5px solid var(--line); border-radius: 12px; background: var(--panel); }
 
 .table-wrap:focus-visible { outline: 2px solid var(--accent, var(--heat)); }
 
-.standings table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.standings table { min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: normal; }
 
-.standings th, .standings td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.standings th, .standings td { padding: 8px 10px; border-bottom: .5px solid var(--line); text-align: left; white-space: nowrap; background: var(--panel); }
 
 .standings thead th { font: 600 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 
-.standings tbody th { font-weight: 700; }
+.standings .place-head, .standings .place-cell { position: sticky; left: 0; z-index: 1; width: 48px; min-width: 48px; }
 
-.standings .points { font-weight: 700; }
+.standings .who { position: sticky; left: 48px; z-index: 1; min-width: 7.5em; max-width: 9.5em; white-space: normal; border-right: .5px solid var(--line); }
 
-.standings .points .provisional { margin-left: 8px; }
+.standings tbody .who { font-weight: 700; }
 
-.live-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+.standings .points-head, .standings td.points { position: sticky; right: 0; z-index: 1; text-align: right; border-left: .5px solid var(--line); }
+
+.standings td.points { font-weight: 700; }
+
+.standings td.points .provisional { display: block; width: fit-content; margin: 4px 0 0 auto; }
+
+.standings .wod { color: var(--muted); }
+
+.live-note { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
