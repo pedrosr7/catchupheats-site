@@ -1292,3 +1292,130 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 .plan-qr-hint { margin: 0; color: var(--muted); }
 
 .plan .aura-fine { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+/* Live: the Info and Live tabs of a competition page, shown by live.js only while the live server has a live. */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 24px;
+  padding: 3px;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+}
+
+.tabs[hidden] { display: none; }
+
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: 700 15px/1 var(--body);
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] { background: var(--paper); color: var(--ink); }
+
+.tab:focus-visible { outline: 2px solid var(--accent, var(--heat)); outline-offset: 2px; }
+
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--heat); animation: pulse 1.6s ease-in-out infinite; }
+
+@keyframes pulse { 50% { opacity: .3; } }
+
+/* Room for a heat before the first answer is drawn, so the panel does not jump as it fills. */
+.live-body { min-height: 240px; }
+
+.live-status { margin: 0 0 4px; font: 600 12px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.live-updated { margin: 18px 0 0; font: 600 11px/1.4 var(--mono); letter-spacing: .08em; color: var(--muted); min-height: 1.4em; }
+
+.heat { margin: 0 0 18px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+
+.heat-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin: 0 0 4px; }
+
+.heat-name { font: 900 24px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+.heat-state { font: 600 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent, var(--heat)); }
+
+/* Tabular digits so the running clock does not shift the line every second. */
+.live-clock { margin-left: auto; font: 900 32px/1 var(--display); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
+
+.heat-cap { margin: 0 0 10px; font: 600 11px/1.4 var(--mono); color: var(--muted); }
+
+.lanes { margin: 0; padding: 0; list-style: none; }
+
+.lane {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 2px 10px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.lane-no { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.lane-name { font-weight: 700; min-width: 0; }
+
+.lane-phase, .lane-result { text-align: right; }
+
+.lane-result { font: 900 22px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+.lane progress { grid-column: 1 / -1; width: 100%; height: 6px; accent-color: var(--accent, var(--heat)); }
+
+.splits { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 13px; }
+
+.splits b { color: var(--paper); font-variant-numeric: tabular-nums; }
+
+.provisional, .void {
+  justify-self: end;
+  padding: 2px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: 600 10px/1.3 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--hyrox);
+}
+
+.lane .provisional, .lane .void { grid-column: 3; }
+
+.void { color: var(--muted); }
+
+.next-heats { margin: 0; padding: 0; list-style: none; }
+
+.next-heats li { padding: 10px 0; border-top: 1px solid var(--line); }
+
+.next-title { display: flex; gap: 10px; margin: 0; font-weight: 700; }
+
+.next-time { font-variant-numeric: tabular-nums; color: var(--accent, var(--heat)); }
+
+.next-lanes { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+
+.standings h3 { margin: 18px 0 8px; font: 900 22px/1 var(--display); font-stretch: condensed; text-transform: uppercase; }
+
+/* A wide table scrolls inside its own box on a phone, never the page. */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+
+.table-wrap:focus-visible { outline: 2px solid var(--accent, var(--heat)); }
+
+.standings table { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+
+.standings th, .standings td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+
+.standings thead th { font: 600 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+.standings tbody th { font-weight: 700; }
+
+.standings .points { font-weight: 700; }
+
+.standings .points .provisional { margin-left: 8px; }
+
+.live-note { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
