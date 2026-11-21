@@ -1011,10 +1011,6 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lane-stage { display: none; }
-}
-
 /* Calendar view: the month as a grid, drawn by site.js from the cards. */
 
 #filters .views {
@@ -1393,10 +1389,18 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .lane-count { font: 600 12px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
 
-/* The slot a later drawing of the lane fills; until then, and for visitors who ask for less motion, it takes no room. */
-.lane-stage { height: 44px; margin: 8px 0 0; }
+/* The lane's athletes (avatars.js); with nothing drawn in it the stage takes no room. */
+.lane-stage { height: 120px; margin: 6px 0 0; overflow: hidden; }
 
 .lane-stage:empty { display: none; }
+
+.lane-avatars { display: block; width: 100%; height: 120px; image-rendering: pixelated; }
+
+.avatar-style { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 2px 4px; margin: 0 0 6px; }
+
+.avatar-style-label { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
+
+.live .avatar-style .toggle { padding: 6px 10px; }
 
 .lane-bar { display: flex; gap: 4px; margin: 8px 0 6px; }
 

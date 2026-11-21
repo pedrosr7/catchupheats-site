@@ -26,6 +26,8 @@
   // Both views are kept in this browser only; a private window or blocked storage falls back to the default.
   var VIEW_KEY = "catchupheats.live.view";
   var HEAT_VIEW_KEY = "catchupheats.live.heatview";
+  var AVATAR_KEY = "catchupheats.live.avatarstyle";
+  var AVATAR_STYLES = ["det", "com", "ret"];
 
   var data = panel.dataset;
   if (!within(data.start, data.end)) return;
@@ -50,7 +52,20 @@
   var latest = null;
   var view = remembered(VIEW_KEY, "table", "list");
   var heatView = remembered(HEAT_VIEW_KEY, "times", "visual");
+  var avatarStyle = rememberedOf(AVATAR_KEY, AVATAR_STYLES);
   var category = null;
+  // The lanes the last redraw put on the card, for the voxel athletes; their script loads once one is running.
+  var stages = [];
+  var avatarsAsked = false;
+
+  function rememberedOf(key, names) {
+    try {
+      var kept = window.localStorage.getItem(key);
+      return names.indexOf(kept) >= 0 ? kept : names[0];
+    } catch (e) {
+      return names[0];
+    }
+  }
 
   function remembered(key, other, fallback) {
     try {
@@ -201,7 +216,7 @@
     // the floor this line is the only place that says so.
     if (status.textContent !== said) status.textContent = said;
     latest = live;
-    var key = JSON.stringify([live.now, live.next, live.standings, view, heatView, category]);
+    var key = JSON.stringify([live.now, live.next, live.standings, view, heatView, avatarStyle, category]);
     if (key === drawn) return tickClocks();
     paint();
   }
@@ -209,6 +224,7 @@
   // Draws the latest answer with the visitor's view and category: on a new answer, and at once on a press.
   function paint() {
     var live = latest;
+    stages = [];
     var parts = document.createDocumentFragment();
     if (live.now.length) {
       parts.appendChild(el("h2", null, t("now")));
@@ -234,8 +250,22 @@
     while (body.firstChild) body.removeChild(body.firstChild);
     body.appendChild(parts);
     restore(kept);
-    drawn = JSON.stringify([live.now, live.next, live.standings, view, heatView, category]);
+    drawn = JSON.stringify([live.now, live.next, live.standings, view, heatView, avatarStyle, category]);
     tickClocks();
+    athletes();
+  }
+
+  // The athletes are decoration: their script is fetched only when a heat is running in «Visual», and a failure to load
+  // it leaves the stages empty, which the stylesheet hides.
+  function athletes() {
+    if (window.CatchUpAvatars) return window.CatchUpAvatars.sync(stages, { style: avatarStyle });
+    if (avatarsAsked || !panel.dataset.avatars || !stages.some(function (s) { return s.heat.status === "RUNNING"; })) return;
+    avatarsAsked = true;
+    var script = document.createElement("script");
+    script.src = panel.dataset.avatars;
+    script.async = true;
+    script.onload = function () { if (window.CatchUpAvatars) window.CatchUpAvatars.sync(stages, { style: avatarStyle }); };
+    document.head.appendChild(script);
   }
 
   // A redraw replaces the panel's nodes: what the visitor scrolled sideways or has focus on is put back where it was.
@@ -298,11 +328,24 @@
       }));
     });
     block.appendChild(views);
+    if (heatView === "visual") {
+      var looks = el("div", "avatar-style");
+      looks.setAttribute("role", "group");
+      looks.setAttribute("aria-label", t("avatars"));
+      looks.appendChild(el("span", "avatar-style-label", t("avatars")));
+      AVATAR_STYLES.forEach(function (name) {
+        looks.appendChild(toggle("avatars:" + heat.heatId + ":" + name, t("av-" + name), avatarStyle === name, function () {
+          avatarStyle = name;
+          remember(AVATAR_KEY, name);
+        }));
+      });
+      block.appendChild(looks);
+    }
     if (heatView === "times") {
       block.appendChild(times(heat, phases, lanes));
     } else {
       var list = el("ol", "lanes");
-      byRank(lanes).forEach(function (one) { list.appendChild(laneItem(one, phases.length)); });
+      byRank(lanes).forEach(function (one) { list.appendChild(laneItem(one, phases.length, heat)); });
       block.appendChild(list);
     }
     return block;
@@ -335,7 +378,7 @@
     };
   }
 
-  function laneItem(one, total) {
+  function laneItem(one, total, heat) {
     var lane = one.lane;
     var item = el("li", "lane");
     var top = el("div", "lane-top");
@@ -343,10 +386,15 @@
     top.appendChild(el("span", "lane-name", lane.entryName));
     if (total) top.appendChild(el("span", "lane-count", (one.blank ? 0 : Math.min(one.done + 1, total)) + "/" + total));
     item.appendChild(top);
-    // Left empty on purpose: a later drawing of the lane goes here, and the stylesheet hides it while it is empty.
+    // The lane's athletes, drawn by avatars.js; the stylesheet hides the stage while nothing is drawn in it.
     var stage = el("div", "lane-stage");
     stage.setAttribute("aria-hidden", "true");
     item.appendChild(stage);
+    stages.push({
+      stage: stage, key: heat.heatId + ":" + lane.laneId, laneId: lane.laneId, lane: lane.lane, heat: heat, total: total,
+      done: one.done, current: one.current, blank: one.blank, closed: one.voided || !!one.result || !!lane.closed,
+      phase: lane.currentPhase,
+    });
     if (total) {
       var bar = el("div", "lane-bar");
       bar.setAttribute("role", "img");
