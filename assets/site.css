@@ -1011,6 +1011,10 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .lane-stage { display: none; }
+}
+
 /* Calendar view: the month as a grid, drawn by site.js from the cards. */
 
 #filters .views {
@@ -1338,45 +1342,31 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .live h2 { margin: 22px 0 10px; }
 
-/* A compact card: the heat in one line, its clock and how much of the cap has gone, then a line per lane. */
-.heat { margin: 0 0 18px; padding: 12px 14px; border: .5px solid var(--line); border-radius: 12px; background: var(--panel); }
+/* The heat card: a header with the big clock, a thin bar toward the cap, then the lanes as a track or as split times. */
+.heat { margin: 0 0 18px; padding: 14px; border: .5px solid var(--line); border-radius: 12px; background: var(--panel); }
 
-.heat-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin: 0; }
+.heat-head { display: flex; align-items: flex-start; gap: 12px; }
+
+.heat-head-main { flex: 1; min-width: 0; }
+
+.heat-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0; }
 
 .heat-name { font: 900 20px/1.05 var(--display); font-stretch: condensed; text-transform: uppercase; min-width: 0; }
 
-.heat-state { font: 600 10px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent, var(--heat)); }
-
-/* Tabular digits so the running clock does not shift the line every second. */
-.live-clock { margin-left: auto; font: 900 28px/1 var(--display); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
-
-.heat-progress { display: block; width: 100%; height: 4px; margin: 10px 0 4px; }
-
-.heat-cap { margin: 0 0 4px; font: 600 10px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
-
-.lanes { margin: 0; padding: 0; list-style: none; }
-
-.lane {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: baseline;
-  gap: 2px 10px;
-  padding: 7px 0;
-  border-top: .5px solid var(--line);
-  font-size: 14px;
+.heat-state {
+  padding: 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font: 600 10px/1 var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent, var(--heat));
 }
 
-.lane-no { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+/* Tabular digits so the running clock does not shift the line every second. */
+.live-clock { flex: none; font: 900 40px/.9 var(--display); font-variant-numeric: tabular-nums; min-width: 4ch; text-align: right; }
 
-.lane-name { font-weight: 700; min-width: 0; overflow-wrap: normal; }
-
-.lane-phase, .lane-result { text-align: right; }
-
-.lane-phase { color: var(--muted); font-size: 13px; }
-
-.lane-result { font: 900 18px/1 var(--display); font-variant-numeric: tabular-nums; }
-
-.lane progress { grid-column: 1 / -1; width: 100%; height: 3px; }
+.heat-progress { display: block; width: 100%; height: 3px; margin: 12px 0 10px; }
 
 /* Drawn by hand: a native bar this thin loses its fill on some browsers. */
 .live progress { appearance: none; -webkit-appearance: none; border: 0; border-radius: 2px; background: var(--line); color: var(--heat); }
@@ -1387,9 +1377,64 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .live progress::-moz-progress-bar { background: var(--heat); border-radius: 2px; }
 
-.splits { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0 10px; margin: 0; padding: 0; list-style: none; color: var(--muted); font-size: 12px; }
+.heat-cap { margin: 6px 0 0; font: 600 10px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 
-.splits b { color: var(--paper); font-variant-numeric: tabular-nums; }
+.heat-view { display: flex; width: fit-content; margin: 0 0 6px auto; padding: 2px; border: .5px solid var(--line); border-radius: 999px; background: var(--ink); }
+
+.lanes { margin: 0; padding: 0; list-style: none; }
+
+.lane { padding: 10px 0; border-top: .5px solid var(--line); font-size: 14px; }
+
+.lane-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 10px; }
+
+.lane-no { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+.lane-name { font-weight: 700; min-width: 0; overflow-wrap: normal; }
+
+.lane-count { font: 600 12px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+
+/* The slot a later drawing of the lane fills; until then, and for visitors who ask for less motion, it takes no room. */
+.lane-stage { height: 44px; margin: 8px 0 0; }
+
+.lane-stage:empty { display: none; }
+
+.lane-bar { display: flex; gap: 4px; margin: 8px 0 6px; }
+
+.seg { flex: 1; height: 8px; border-radius: 3px; background: var(--line); overflow: hidden; }
+
+.seg.done { background: var(--heat); }
+
+.seg.current { background: color-mix(in srgb, var(--heat) 22%, var(--line)); }
+
+/* The live server sends no progress inside a phase: the current piece shows only that it has begun. */
+.seg .fill { display: block; width: 18%; height: 100%; background: var(--heat); }
+
+.lane-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+
+.lane-phase { min-width: 0; font-weight: 500; font-size: 14px; color: var(--paper); }
+
+.lane-phase.blank { color: var(--muted); }
+
+.lane-result { font: 900 18px/1 var(--display); font-variant-numeric: tabular-nums; }
+
+/* Split times: position and name stay put while the phases scroll inside the box; the gap stays on the right. */
+.times table { min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: normal; }
+
+.times th, .times td { padding: 8px; border-bottom: .5px solid var(--line); text-align: left; white-space: nowrap; background: var(--panel); }
+
+.times thead th { font: 600 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+
+.times .place-head, .times .place-cell { position: sticky; left: 0; z-index: 1; width: 44px; min-width: 44px; }
+
+.times .who { position: sticky; left: 44px; z-index: 1; min-width: 6em; max-width: 7.5em; white-space: normal; border-right: .5px solid var(--line); }
+
+.times tbody .who { font-weight: 700; }
+
+.times .gap { position: sticky; right: 0; z-index: 1; text-align: right; border-left: .5px solid var(--line); }
+
+.times td.now { color: var(--heat); font-weight: 700; }
+
+.times td.pending, .times td.void-gap { color: var(--muted); }
 
 .provisional, .void {
   justify-self: end;
@@ -1401,8 +1446,6 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   text-transform: uppercase;
   color: var(--hyrox);
 }
-
-.lane .provisional, .lane .void { grid-column: 3; }
 
 .void { color: var(--muted); }
 
@@ -1439,7 +1482,7 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   cursor: pointer;
 }
 
-.live .view-switch .toggle { border-color: transparent; }
+.live .view-switch .toggle, .live .heat-view .toggle { border-color: transparent; }
 
 .live .toggle:hover { color: var(--paper); border-color: var(--paper); }
 

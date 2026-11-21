@@ -23,8 +23,9 @@
   // From the day before it starts to a week after it ends: the rest of the year nobody runs it live.
   var BEFORE_DAYS = 1;
   var AFTER_DAYS = 7;
-  // The standings view is kept in this browser only; a private window or blocked storage falls back to the list.
+  // Both views are kept in this browser only; a private window or blocked storage falls back to the default.
   var VIEW_KEY = "catchupheats.live.view";
+  var HEAT_VIEW_KEY = "catchupheats.live.heatview";
 
   var data = panel.dataset;
   if (!within(data.start, data.end)) return;
@@ -47,20 +48,21 @@
   var gaveUpAt = 0;
   var drawn = "";
   var latest = null;
-  var view = remembered();
+  var view = remembered(VIEW_KEY, "table", "list");
+  var heatView = remembered(HEAT_VIEW_KEY, "times", "visual");
   var category = null;
 
-  function remembered() {
+  function remembered(key, other, fallback) {
     try {
-      return window.localStorage.getItem(VIEW_KEY) === "table" ? "table" : "list";
+      return window.localStorage.getItem(key) === other ? other : fallback;
     } catch (e) {
-      return "list";
+      return fallback;
     }
   }
 
-  function remember(name) {
+  function remember(key, name) {
     try {
-      window.localStorage.setItem(VIEW_KEY, name);
+      window.localStorage.setItem(key, name);
     } catch (e) {
       // Nothing to keep it in: the choice lasts this visit.
     }
@@ -199,7 +201,7 @@
     // the floor this line is the only place that says so.
     if (status.textContent !== said) status.textContent = said;
     latest = live;
-    var key = JSON.stringify([live.now, live.next, live.standings, view, category]);
+    var key = JSON.stringify([live.now, live.next, live.standings, view, heatView, category]);
     if (key === drawn) return tickClocks();
     paint();
   }
@@ -232,7 +234,7 @@
     while (body.firstChild) body.removeChild(body.firstChild);
     body.appendChild(parts);
     restore(kept);
-    drawn = JSON.stringify([live.now, live.next, live.standings, view, category]);
+    drawn = JSON.stringify([live.now, live.next, live.standings, view, heatView, category]);
     tickClocks();
   }
 
@@ -257,70 +259,173 @@
 
   function heatBlock(heat) {
     var block = el("article", "heat");
+    var head = el("div", "heat-head");
+    var main = el("div", "heat-head-main");
     var title = el("p", "heat-title");
     title.appendChild(el("span", "heat-name", heat.wodName + " · " + heat.categoryName));
     title.appendChild(el("span", "heat-state", heatState(heat.status)));
+    main.appendChild(title);
+    head.appendChild(main);
     var running = heat.status === "RUNNING" && typeof heat.startedAtMs === "number";
+    var cap = typeof heat.capSeconds === "number" ? t("cap").replace("{time}", seconds(heat.capSeconds)) : null;
+    if (cap) main.appendChild(el("p", "heat-cap", cap));
     if (running) {
       var clock = el("span", "live-clock");
       clock.setAttribute("data-started", heat.startedAtMs);
-      if (typeof heat.capSeconds === "number") clock.setAttribute("data-cap", heat.capSeconds);
+      if (cap) clock.setAttribute("data-cap", heat.capSeconds);
       // A timer is read when the visitor reaches it, never announced on its own: it changes every second.
       clock.setAttribute("role", "timer");
-      title.appendChild(clock);
+      head.appendChild(clock);
     }
-    block.appendChild(title);
-    if (typeof heat.capSeconds === "number") {
-      var cap = t("cap").replace("{time}", seconds(heat.capSeconds));
-      if (running) {
-        var gone = el("progress", "heat-progress");
-        gone.max = heat.capSeconds;
-        gone.value = 0;
-        gone.setAttribute("data-started", heat.startedAtMs);
-        gone.setAttribute("aria-label", cap);
-        block.appendChild(gone);
-      }
-      block.appendChild(el("p", "heat-cap", cap));
+    block.appendChild(head);
+    if (running && cap) {
+      var gone = el("progress", "heat-progress");
+      gone.max = heat.capSeconds;
+      gone.value = 0;
+      gone.setAttribute("data-started", heat.startedAtMs);
+      gone.setAttribute("aria-label", cap);
+      block.appendChild(gone);
     }
     var phases = heat.phases || [];
-    var lanes = el("ol", "lanes");
-    byRank(heat.lanes || []).forEach(function (lane) { lanes.appendChild(laneItem(lane, phases.length)); });
-    block.appendChild(lanes);
+    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases); });
+    var views = el("div", "heat-view");
+    views.setAttribute("role", "group");
+    views.setAttribute("aria-label", t("heatview"));
+    ["visual", "times"].forEach(function (name) {
+      views.appendChild(toggle("heatview:" + heat.heatId + ":" + name, t(name), heatView === name, function () {
+        heatView = name;
+        remember(HEAT_VIEW_KEY, name);
+      }));
+    });
+    block.appendChild(views);
+    if (heatView === "times") {
+      block.appendChild(times(heat, phases, lanes));
+    } else {
+      var list = el("ol", "lanes");
+      byRank(lanes).forEach(function (one) { list.appendChild(laneItem(one, phases.length)); });
+      block.appendChild(list);
+    }
     return block;
   }
 
-  function laneItem(lane, total) {
-    var item = el("li", "lane");
-    item.appendChild(el("span", "lane-no", t("lane").replace("{n}", lane.lane)));
-    item.appendChild(el("span", "lane-name", lane.entryName));
-    // The live server drops a voided lane's result, so VOID is read on its own.
+  // What both views read off a lane. The live server sends no progress inside a phase, so the current one is only named.
+  function laneState(lane, phases) {
+    var total = phases.length;
     var voided = lane.review === "VOID";
-    if (lane.result) item.appendChild(el("span", "lane-result", lane.result.display));
-    else if (!voided) item.appendChild(el("span", "lane-phase", lane.currentPhase || (lane.phasesDone >= total && total ? t("finished") : "")));
-    if (voided) item.appendChild(el("span", "void", t("void")));
-    // As the live server counts it: whatever is not validated, a review state this script does not know included, is provisional.
-    else if (lane.result && lane.review !== "VALIDATED") item.appendChild(el("span", "provisional", t("provisional")));
+    var result = lane.result || null;
+    var splits = lane.splits || [];
+    var done = Math.min(lane.phasesDone || 0, total);
+    if (result && result.finished) done = total;
+    // The live server drops a voided lane's result, so VOID is read on its own.
+    var closed = voided || !!result || !!lane.closed;
+    var at = {};
+    splits.forEach(function (split) { if (split && typeof split.second === "number") at[split.phase] = split.second; });
+    var splitAt = phases.map(function (phase) { return typeof at[phase] === "number" ? at[phase] : null; });
+    return {
+      lane: lane,
+      rank: lane.rank,
+      number: lane.lane,
+      voided: voided,
+      result: result,
+      done: done,
+      blank: !closed && done === 0 && !splits.length,
+      current: !closed && done < total ? done : -1,
+      times: splitAt,
+      reached: done ? splitAt[done - 1] : null,
+    };
+  }
+
+  function laneItem(one, total) {
+    var lane = one.lane;
+    var item = el("li", "lane");
+    var top = el("div", "lane-top");
+    top.appendChild(el("span", "lane-no", t("lane").replace("{n}", lane.lane)));
+    top.appendChild(el("span", "lane-name", lane.entryName));
+    if (total) top.appendChild(el("span", "lane-count", (one.blank ? 0 : Math.min(one.done + 1, total)) + "/" + total));
+    item.appendChild(top);
+    // Left empty on purpose: a later drawing of the lane goes here, and the stylesheet hides it while it is empty.
+    var stage = el("div", "lane-stage");
+    stage.setAttribute("aria-hidden", "true");
+    item.appendChild(stage);
     if (total) {
-      var bar = el("progress");
-      bar.max = total;
-      bar.value = Math.min(lane.phasesDone || 0, total);
-      bar.setAttribute("aria-label", t("phases").replace("{done}", bar.value).replace("{total}", total));
+      var bar = el("div", "lane-bar");
+      bar.setAttribute("role", "img");
+      bar.setAttribute("aria-label", t("phases").replace("{done}", one.done).replace("{total}", total));
+      for (var i = 0; i < total; i++) {
+        var seg = el("span", "seg " + (i < one.done ? "done" : i === one.current && !one.blank ? "current" : "pending"));
+        if (i === one.current && !one.blank) seg.appendChild(el("span", "fill"));
+        bar.appendChild(seg);
+      }
       item.appendChild(bar);
     }
-    var splits = lane.splits || [];
-    if (splits.length) {
-      var list = el("ul", "splits");
-      list.setAttribute("aria-label", t("splits"));
-      splits.forEach(function (split) {
-        var li = el("li");
-        li.appendChild(el("span", null, split.phase));
-        li.appendChild(document.createTextNode(" "));
-        li.appendChild(el("b", null, seconds(split.second)));
-        list.appendChild(li);
-      });
-      item.appendChild(list);
-    }
+    var foot = el("div", "lane-foot");
+    if (one.result) foot.appendChild(el("span", "lane-result", one.result.display));
+    else if (one.blank) foot.appendChild(el("span", "lane-phase blank", t("nomarks")));
+    else if (!one.voided) foot.appendChild(el("span", "lane-phase", lane.currentPhase || (one.done >= total && total ? t("finished") : "")));
+    if (one.voided) foot.appendChild(el("span", "void", t("void")));
+    // As the live server counts it: whatever is not validated, a review state this script does not know included, is provisional.
+    else if (one.result && lane.review !== "VALIDATED") foot.appendChild(el("span", "provisional", t("provisional")));
+    item.appendChild(foot);
     return item;
+  }
+
+  // Further on first; at the same phase, whoever got there first; a voided lane last.
+  function byProgress(lanes) {
+    return lanes.slice().sort(function (a, b) {
+      if (a.voided !== b.voided) return a.voided ? 1 : -1;
+      if (a.done !== b.done) return b.done - a.done;
+      var ta = a.reached === null ? Infinity : a.reached;
+      var tb = b.reached === null ? Infinity : b.reached;
+      return ta === tb ? a.number - b.number : ta - tb;
+    });
+  }
+
+  function times(heat, phases, lanes) {
+    var box = el("div", "times");
+    var wrap = el("div", "table-wrap");
+    wrap.setAttribute("tabindex", "0");
+    wrap.setAttribute("data-key", "times:" + heat.heatId);
+    wrap.setAttribute("role", "region");
+    wrap.setAttribute("aria-label", heat.wodName + " · " + heat.categoryName);
+    var grid = el("table");
+    var head = el("tr");
+    [t("place"), t("athlete")].concat(phases, [t("gap")]).forEach(function (name, i, all) {
+      var th = el("th", i === 0 ? "place-head" : i === 1 ? "who" : i === all.length - 1 ? "gap" : null, name);
+      th.setAttribute("scope", "col");
+      head.appendChild(th);
+    });
+    grid.appendChild(el("thead")).appendChild(head);
+    var rows = el("tbody");
+    var ordered = byProgress(lanes);
+    var first = ordered[0] && !ordered[0].voided && ordered[0].reached !== null ? ordered[0] : null;
+    ordered.forEach(function (one, n) {
+      var tr = el("tr");
+      var cell = el("td", "place-cell");
+      cell.appendChild(el("span", "place" + (!one.voided && n === 0 && one.done ? " lead" : ""), one.voided ? "–" : String(n + 1)));
+      tr.appendChild(cell);
+      var name = el("th", "who");
+      name.setAttribute("scope", "row");
+      name.appendChild(el("span", "entry", one.lane.entryName));
+      tr.appendChild(name);
+      phases.forEach(function (phase, i) {
+        if (i < one.done) tr.appendChild(el("td", "split", one.times[i] === null ? "–" : seconds(one.times[i])));
+        else if (i === one.current) tr.appendChild(el("td", "split now", "…"));
+        else tr.appendChild(el("td", "split pending", "·"));
+      });
+      tr.appendChild(el("td", "gap" + (one.voided ? " void-gap" : ""), one.voided ? t("void") : gap(one, first)));
+      rows.appendChild(tr);
+    });
+    grid.appendChild(rows);
+    wrap.appendChild(grid);
+    box.appendChild(wrap);
+    return box;
+  }
+
+  // Against the first lane's time at the same phase, which it reached no later.
+  function gap(one, first) {
+    if (!first || one === first || one.reached === null) return "–";
+    var theirs = first.times[one.done - 1];
+    return typeof theirs === "number" ? "+" + seconds(one.reached - theirs) : "–";
   }
 
   function nextItem(heat) {
@@ -359,7 +464,7 @@
     ["list", "table"].forEach(function (name) {
       views.appendChild(toggle("view:" + name, t(name), view === name, function () {
         view = name;
-        remember(name);
+        remember(VIEW_KEY, name);
       }));
     });
     bar.appendChild(views);
@@ -459,7 +564,7 @@
     return lanes.slice().sort(function (a, b) {
       var ra = typeof a.rank === "number" ? a.rank : Infinity;
       var rb = typeof b.rank === "number" ? b.rank : Infinity;
-      return ra === rb ? a.lane - b.lane : ra - rb;
+      return ra === rb ? a.number - b.number : ra - rb;
     });
   }
 
