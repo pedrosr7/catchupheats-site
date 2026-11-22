@@ -161,9 +161,6 @@
       done: START + n * len + 30, end: START + n * len + 62,
       // The live server counts an AMRAP's phases on and on, round after round, and any other WOD's that has no finish line.
       laps: format !== "FOR_TIME",
-      // It sends no mark of a max-reps, interval or max-load WOD until its score, nor of one with no phases: waiting for one
-      // would be waiting to the end.
-      waits: phases.length > 0 && !/^MAX_/.test(format),
       names: moves.map(function (m, i) { return String(m.movement || texts[i] || "").toUpperCase(); }),
       anims: moves.map(function (m) { return m.anim; }),
       props: moves.map(function (m) { return ANIMS[m.anim].prop || ""; }),
@@ -172,13 +169,13 @@
 
   function laneX(L, i) { return (i - (L.lanes - 1) / 2) * (L.lane + GAP); }
 
-  // Where a lane is: slot -1 behind the start line, a station, or L.n past the arch; `lap` the round of it under way.
+  // Where a lane is: a station, or L.n past the arch; `lap` the round of it under way. Only a running heat has a track and the
+  // server marks a phase when it ends, so no marks means the first is under way.
   function place(lane, L) {
     var marks = Math.max(0, Math.floor(+lane.done || 0)), lap = L.laps ? Math.floor(marks / L.n) : 0;
     var slot = L.laps ? marks % L.n : Math.min(marks, lane.closed ? L.n : L.n - 1);
     if (lane.closed && lane.finished && !lane.voided) slot = L.n;
-    else if (!marks && L.waits) slot = -1;
-    var working = slot >= 0 && slot < L.n && !lane.closed && !lane.voided;
+    var working = slot < L.n && !lane.closed && !lane.voided;
     return { slot: slot, lap: lap, anim: working ? L.anims[slot] : "idle", since: lane.since, key: lap * (L.n + 1) + slot };
   }
 
@@ -187,7 +184,6 @@
   function runShare(ms) { return ms > 0 ? ms / (ms + RUN_HALF_MS) : 0; }
 
   function rest(p, L, now, since) {
-    if (p.slot < 0) return L.wait;
     if (p.slot >= L.n) return L.done;
     var middle = L.start + (p.slot + 0.5) * L.len;
     if (p.anim !== "run") return middle;

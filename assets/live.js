@@ -660,11 +660,11 @@
         says.appendChild(star);
         says.appendChild(el("span", "said", " " + t("provisional")));
       }
-    } else if (one.blank) {
+    } else if (one.blank && !opening(one, total, heat)) {
       says.appendChild(el("span", "lane-phase", t("nomarks")));
     } else {
       // The server counts an AMRAP's phases on and on: the row says the round under way.
-      var laps = heat.format === "AMRAP" && total > 0 && one.marks > 0 && !one.closed;
+      var laps = heat.format === "AMRAP" && total > 0 && !one.closed;
       var done = laps ? one.marks % total : one.done;
       var words = laps ? [t("round").replace("{n}", Math.floor(one.marks / total) + 1)] : [];
       if (one.lane.currentPhase) words.push(one.lane.currentPhase);
@@ -673,6 +673,12 @@
       if (done < total) says.appendChild(el("span", "lane-count", (words.length ? " · " : "") + (done + 1) + "/" + total));
     }
     return says;
+  }
+
+  // With no marks, the first phase of a running heat is under way: the server marks a phase when it ends. Of a max-reps or
+  // max-load WOD it sends none until the score, so there a phase and its count would tell nothing.
+  function opening(one, total, heat) {
+    return heat.status === "RUNNING" && total > 0 && !!one.lane.currentPhase && !/^MAX_/.test(heat.format);
   }
 
   // As the live server counts it: whatever is not validated, a review state this script does not know included.
