@@ -23,11 +23,16 @@
   // From the day before it starts to a week after it ends: the rest of the year nobody runs it live.
   var BEFORE_DAYS = 1;
   var AFTER_DAYS = 7;
-  // Both views are kept in this browser only; a private window or blocked storage falls back to the default.
+  // The views and choices are kept in this browser only; a private window or blocked storage falls back to the default.
   var VIEW_KEY = "catchupheats.live.view";
   var HEAT_VIEW_KEY = "catchupheats.live.heatview";
   var AVATAR_KEY = "catchupheats.live.avatarstyle";
   var AVATAR_STYLES = ["det", "com", "ret"];
+  // avatars.js's lane colours, by lane: the rows have their pins when that script never comes.
+  var PINS = ["#ff4a1c", "#1fb5a8", "#8a5cf5", "#f2efe6", "#f2c230", "#3d8bfd", "#f05a9a", "#9bd13b"];
+  var HINT_KEY = "catchupheats.live.trackhint";
+  // Where the visitor was looking, for the next page of this tab: the other language's, or this one reloaded.
+  var VIEWS_KEY = "catchupheats.live.trackviews";
 
   var data = panel.dataset;
   if (!within(data.start, data.end)) return;
@@ -53,10 +58,16 @@
   var view = remembered(VIEW_KEY, "table", "list");
   var heatView = remembered(HEAT_VIEW_KEY, "times", "visual");
   var avatarStyle = rememberedOf(AVATAR_KEY, AVATAR_STYLES);
+  var hinting = remembered(HINT_KEY, "done", "") === "";
   var category = null;
-  // The lanes the last redraw put on the card, for the voxel athletes; their script loads once one is running.
-  var stages = [];
+  // The heats the last redraw put on the page, for their scenes; the script that draws them loads once one is running.
+  var scenes = [];
   var avatarsAsked = false;
+  // The scene goes, and its rows are plain text, without its script or on a phone that cannot keep up.
+  var drawable = !!data.avatars;
+  // By heat on the floor: its card and its track, which no redraw replaces, so a finger on it or a full screen outlives them.
+  var tracks = {};
+  var leftViews = viewsLeft();
 
   function rememberedOf(key, names) {
     try {
@@ -190,8 +201,11 @@
     if (focus) tabs[index].focus();
   }
 
+  window.addEventListener("pagehide", leaveViews);
+
   document.addEventListener("visibilitychange", function () {
     if (document.hidden) {
+      leaveViews();
       clearTimeout(timer);
       timer = null;
       stopClocks();
@@ -216,25 +230,29 @@
     // the floor this line is the only place that says so.
     if (status.textContent !== said) status.textContent = said;
     latest = live;
-    var key = JSON.stringify([live.now, live.next, live.standings, view, heatView, avatarStyle, category]);
-    if (key === drawn) return tickClocks();
+    if (shownKey() === drawn) return tickClocks();
     paint();
+  }
+
+  function shownKey() {
+    return JSON.stringify([latest.now, latest.next, latest.standings, view, heatView, avatarStyle, category, drawable]);
   }
 
   // Draws the latest answer with the visitor's view and category: on a new answer, and at once on a press.
   function paint() {
     var live = latest;
-    stages = [];
-    var parts = document.createDocumentFragment();
+    var kept = keep();
+    scenes = [];
+    var parts = [];
     if (live.now.length) {
-      parts.appendChild(el("h2", null, t("now")));
-      live.now.forEach(function (heat) { parts.appendChild(heatBlock(heat)); });
+      parts.push(el("h2", null, t("now")));
+      live.now.forEach(function (heat) { parts.push(heatBlock(heat)); });
     }
     if (live.next.length) {
-      parts.appendChild(el("h2", null, t("next")));
+      parts.push(el("h2", null, t("next")));
       var list = el("ol", "next-heats");
       live.next.forEach(function (heat) { list.appendChild(nextItem(heat)); });
-      parts.appendChild(list);
+      parts.push(list);
     }
     // The live server lists every category: one with no published WOD or no one in it has nothing to rank yet.
     var ranked = live.standings.filter(function (one) {
@@ -243,32 +261,52 @@
     if (ranked.length) {
       var chosen = ranked.filter(function (one) { return one.categoryName === category; })[0] || ranked[0];
       category = chosen.categoryName;
-      parts.appendChild(el("h2", null, t("standings")));
-      parts.appendChild(standings(ranked, chosen));
+      parts.push(el("h2", null, t("standings")));
+      parts.push(standings(ranked, chosen));
     }
-    var kept = keep();
-    while (body.firstChild) body.removeChild(body.firstChild);
-    body.appendChild(parts);
+    arrange(body, parts);
+    forgetTracks();
     restore(kept);
-    drawn = JSON.stringify([live.now, live.next, live.standings, view, heatView, avatarStyle, category]);
+    drawn = shownKey();
     tickClocks();
     athletes();
   }
 
-  // The athletes are decoration: their script is fetched only when a heat is running in «Visual», and a failure to load
-  // it leaves the stages empty, which the stylesheet hides.
+  // The nodes a redraw keeps are never taken out of the page, not even for a moment: that would end a gesture on them.
+  function arrange(parent, nodes) {
+    [].slice.call(parent.childNodes).forEach(function (node) {
+      if (nodes.indexOf(node) < 0) parent.removeChild(node);
+    });
+    var at = parent.firstChild;
+    nodes.forEach(function (node) {
+      if (node === at) at = at.nextSibling;
+      else parent.insertBefore(node, at);
+    });
+  }
+
+  // The scene is decoration: its script is fetched only when a heat is running in «Visual», and a failure to load it
+  // leaves the rows alone.
   function athletes() {
-    if (window.CatchUpAvatars) return window.CatchUpAvatars.sync(stages, { style: avatarStyle });
-    if (avatarsAsked || !panel.dataset.avatars || !stages.some(function (s) { return s.heat.status === "RUNNING"; })) return;
+    if (window.CatchUpAvatars) {
+      return window.CatchUpAvatars.sync(scenes, { style: avatarStyle, onLevel: allow, onView: showView });
+    }
+    if (avatarsAsked || !scenes.some(function (one) { return one.track; })) return;
     avatarsAsked = true;
     var script = document.createElement("script");
     script.src = panel.dataset.avatars;
     script.async = true;
-    script.onload = function () { if (window.CatchUpAvatars) window.CatchUpAvatars.sync(stages, { style: avatarStyle }); };
+    // The rows become buttons now that there is something to follow them on.
+    script.onload = function () { if (window.CatchUpAvatars) paint(); };
+    script.onerror = function () { allow({ scene: false }); };
     document.head.appendChild(script);
   }
 
-  // A redraw replaces the panel's nodes: what the visitor scrolled sideways or has focus on is put back where it was.
+  function allow(what) {
+    drawable = what.scene;
+    if (shown && latest) paint();
+  }
+
+  // A redraw replaces most of the panel's nodes: what the visitor scrolled sideways or has focus on is put back where it was.
   function keep() {
     var scrolled = {};
     [].forEach.call(body.querySelectorAll(".table-wrap"), function (wrap) {
@@ -288,7 +326,11 @@
   }
 
   function heatBlock(heat) {
-    var block = el("article", "heat");
+    var phases = heat.phases || [];
+    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases); });
+    var it = drawable && heat.status === "RUNNING" && lanes.length ? trackOf(heat) : null;
+    var block = it ? it.card : el("article", "heat");
+    var parts = [];
     var head = el("div", "heat-head");
     var main = el("div", "heat-head-main");
     var title = el("p", "heat-title");
@@ -299,25 +341,17 @@
     var running = heat.status === "RUNNING" && typeof heat.startedAtMs === "number";
     var cap = typeof heat.capSeconds === "number" ? t("cap").replace("{time}", seconds(heat.capSeconds)) : null;
     if (cap) main.appendChild(el("p", "heat-cap", cap));
-    if (running) {
-      var clock = el("span", "live-clock");
-      clock.setAttribute("data-started", heat.startedAtMs);
-      if (cap) clock.setAttribute("data-cap", heat.capSeconds);
-      // A timer is read when the visitor reaches it, never announced on its own: it changes every second.
-      clock.setAttribute("role", "timer");
-      head.appendChild(clock);
-    }
-    block.appendChild(head);
+    var clock = heatClock(heat);
+    if (clock) head.appendChild(clock);
+    parts.push(head);
     if (running && cap) {
       var gone = el("progress", "heat-progress");
       gone.max = heat.capSeconds;
       gone.value = 0;
       gone.setAttribute("data-started", heat.startedAtMs);
       gone.setAttribute("aria-label", cap);
-      block.appendChild(gone);
+      parts.push(gone);
     }
-    var phases = heat.phases || [];
-    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases); });
     var views = el("div", "heat-view");
     views.setAttribute("role", "group");
     views.setAttribute("aria-label", t("heatview"));
@@ -327,7 +361,7 @@
         remember(HEAT_VIEW_KEY, name);
       }));
     });
-    block.appendChild(views);
+    parts.push(views);
     if (heatView === "visual") {
       var looks = el("div", "avatar-style");
       looks.setAttribute("role", "group");
@@ -339,16 +373,217 @@
           remember(AVATAR_KEY, name);
         }));
       });
-      block.appendChild(looks);
+      parts.push(looks);
     }
+    var ordered = byRank(lanes);
+    givePlaces(ordered);
+    if (it) sceneOf(it, heat, ordered);
     if (heatView === "times") {
-      block.appendChild(times(heat, phases, lanes));
+      parts.push(times(heat, phases, lanes));
     } else {
+      if (it) parts.push(it.slot);
       var list = el("ol", "lanes");
-      byRank(lanes).forEach(function (one) { list.appendChild(laneItem(one, phases.length, heat)); });
-      block.appendChild(list);
+      // Two columns on a wide card, the first one filled first.
+      list.style.setProperty("--half", Math.ceil(ordered.length / 2));
+      ordered.forEach(function (one) { list.appendChild(laneItem(one, phases.length, heat, it)); });
+      parts.push(list);
+      var note = laneNote(ordered, heat);
+      if (note) parts.push(note);
     }
+    arrange(block, parts);
     return block;
+  }
+
+  function heatClock(heat) {
+    if (heat.status !== "RUNNING" || typeof heat.startedAtMs !== "number") return null;
+    var clock = el("span", "live-clock");
+    clock.setAttribute("data-started", heat.startedAtMs);
+    if (typeof heat.capSeconds === "number") clock.setAttribute("data-cap", heat.capSeconds);
+    // A timer is read when the visitor reaches it, never announced on its own: it changes every second.
+    clock.setAttribute("role", "timer");
+    return clock;
+  }
+
+  // The place the rows' order gives each lane. The server ranks everyone 1 before the first mark: that is no place yet.
+  function givePlaces(ordered) {
+    var standing = ordered.filter(function (one) { return !one.voided && typeof one.rank === "number"; });
+    var level = standing.every(function (one) { return one.rank === standing[0].rank && !one.marks && !one.result; });
+    standing.forEach(function (one) {
+      if (!level) one.place = { n: one.rank, text: ordinal(one.rank) };
+    });
+  }
+
+  function ordinal(n) {
+    var rule = window.Intl && Intl.PluralRules ? new Intl.PluralRules(lang, { type: "ordinal" }).select(n) : "other";
+    return (t("ordinal-" + rule) || t("ordinal-other")).replace("{n}", n);
+  }
+
+  // What avatars.js draws of a heat: every lane in the order of the floor, and the visitor's view of it if this page was left
+  // and opened again.
+  function sceneOf(it, heat, ordered) {
+    scenes.push({
+      key: heat.heatId, heat: heat, track: heatView === "visual" ? it.scene : null, view: leftViews[heat.heatId] || null,
+      lanes: ordered.slice().sort(function (a, b) { return a.number - b.number; }).map(function (one) {
+        return {
+          id: one.lane.laneId, lane: one.number, name: one.lane.entryName, done: one.marks, closed: one.closed,
+          finished: !!(one.result && one.result.finished), voided: one.voided, since: began(one, heat), place: one.place,
+        };
+      }),
+    });
+  }
+
+  // The track of a heat on the floor: the drawing, which readers skip, and the controls over it. It sits in the card's slot,
+  // or over the whole page while the visitor has it on full screen.
+  function trackOf(heat) {
+    var it = tracks[heat.heatId], name = heat.wodName + " · " + heat.categoryName;
+    if (it) {
+      it.heat = heat;
+      return it;
+    }
+    it = { heat: heat, name: name, card: el("article", "heat"), slot: el("div", "track"), box: el("div", "track-view"), screen: null };
+    tracks[heat.heatId] = it;
+    it.scene = el("div", "track-scene");
+    it.scene.setAttribute("aria-hidden", "true");
+    it.box.setAttribute("role", "group");
+    it.box.setAttribute("aria-label", name);
+    it.full = control("track-full", t("full"), FULL_ICON, function () { if (it.screen) it.screen.close(); else openTrack(it); });
+    it.all = control("track-all", null, null, function (drawn) { drawn.home(heat.heatId); });
+    it.all.textContent = t("showall");
+    it.all.hidden = true;
+    it.closer = control("track-in", t("zoomin"), "M12 5v14M5 12h14", function (drawn) { drawn.zoom(heat.heatId, 1.6); });
+    it.farther = control("track-out", t("zoomout"), "M5 12h14", function (drawn) { drawn.zoom(heat.heatId, 1 / 1.6); });
+    it.full.hidden = !window.HTMLDialogElement || !HTMLDialogElement.prototype.showModal;
+    var mouse = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+    it.hint = el("p", "track-hint", t(mouse ? "hint-mouse" : "hint"));
+    it.hint.setAttribute("aria-hidden", "true");
+    it.hint.hidden = !hinting;
+    [it.scene, it.full, it.closer, it.farther, it.all, it.hint].forEach(function (node) { it.box.appendChild(node); });
+    it.slot.appendChild(it.box);
+    return it;
+  }
+
+  var FULL_ICON = "M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7";
+  var CLOSE_ICON = "M6 6l12 12M18 6L6 18";
+
+  function control(className, label, path, act) {
+    var button = el("button", "track-control " + className);
+    button.type = "button";
+    if (label) button.setAttribute("aria-label", label);
+    if (path) button.appendChild(icon(path));
+    button.addEventListener("click", function () { if (window.CatchUpAvatars) act(window.CatchUpAvatars); });
+    return button;
+  }
+
+  function icon(path) {
+    var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path")).setAttribute("d", path);
+    return svg;
+  }
+
+  // avatars.js says when a heat's view changes of kind: whole, free, or another lane followed.
+  function showView(key) {
+    var it = tracks[key];
+    if (!it) return;
+    var seen = window.CatchUpAvatars.view(key);
+    it.box.classList.toggle("zoomed", seen.mode !== "whole");
+    // A focused control that goes would leave the keyboard nowhere.
+    if (seen.mode === "whole" && document.activeElement === it.all) it.closer.focus({ preventScroll: true });
+    it.all.hidden = seen.mode === "whole";
+    [].forEach.call(it.card.querySelectorAll("button.lane-row"), function (row) {
+      row.setAttribute("aria-pressed", row.getAttribute("data-lane") === String(followed(key)) ? "true" : "false");
+    });
+    if (seen.mode === "whole" || !hinting) return;
+    hinting = false;
+    remember(HINT_KEY, "done");
+    Object.keys(tracks).forEach(function (id) { tracks[id].hint.hidden = true; });
+  }
+
+  function followed(key) {
+    var seen = window.CatchUpAvatars && window.CatchUpAvatars.view(key);
+    return seen && seen.mode === "follow" ? seen.id : null;
+  }
+
+  // A modal dialog and not a fixed box: it is over the page whatever contains it, keeps what is behind out of reach, and
+  // gives Escape and the way back for nothing. iPhone's Safari has no full screen for anything but a video.
+  function openTrack(it) {
+    var screen = el("dialog", "track-screen");
+    screen.setAttribute("aria-label", it.name);
+    var head = el("div", "track-screen-head");
+    head.appendChild(el("span", "heat-name", it.name));
+    var clock = heatClock(it.heat);
+    if (clock) head.appendChild(clock);
+    screen.appendChild(head);
+    screen.appendChild(it.box);
+    panel.appendChild(screen);
+    screen.addEventListener("close", function () { closeTrack(it); });
+    it.screen = screen;
+    nameFull(it, t("fullexit"), CLOSE_ICON);
+    document.documentElement.classList.add("track-open");
+    screen.showModal();
+    it.full.focus();
+    tickClocks();
+  }
+
+  function closeTrack(it) {
+    if (!it.screen) return;
+    var screen = it.screen;
+    it.screen = null;
+    it.slot.appendChild(it.box);
+    panel.removeChild(screen);
+    document.documentElement.classList.remove("track-open");
+    nameFull(it, t("full"), FULL_ICON);
+    (it.slot.isConnected ? it.full : panel).focus({ preventScroll: true });
+  }
+
+  function nameFull(it, label, path) {
+    it.full.setAttribute("aria-label", label);
+    it.full.replaceChild(icon(path), it.full.firstChild);
+  }
+
+  // A heat that left the floor, or a scene that cannot be drawn any more, takes its full screen with it.
+  function forgetTracks() {
+    var here = scenes.map(function (one) { return String(one.key); });
+    Object.keys(tracks).forEach(function (id) {
+      if (here.indexOf(id) >= 0) return;
+      var it = tracks[id];
+      delete tracks[id];
+      delete leftViews[id];
+      closeTrack(it);
+    });
+  }
+
+  function viewsLeft() {
+    try {
+      var left = JSON.parse(window.sessionStorage.getItem(VIEWS_KEY));
+      return left && left.api === new URL(data.api, location.href).href ? left.views : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function leaveViews() {
+    if (!window.CatchUpAvatars) return;
+    var views = {};
+    scenes.forEach(function (one) {
+      var seen = window.CatchUpAvatars.view(one.key);
+      if (seen) views[one.key] = { mode: seen.mode, id: seen.id, s: seen.s, x: seen.x, y: seen.y, want: seen.want };
+    });
+    try {
+      window.sessionStorage.setItem(VIEWS_KEY, JSON.stringify({ api: new URL(data.api, location.href).href, views: views }));
+    } catch (e) {
+      // Nothing to keep them in: the next page starts whole.
+    }
+  }
+
+  // When the phase under way began, on this device's clock: the last mark the server has, or the start.
+  function began(one, heat) {
+    if (typeof heat.startedAtMs !== "number") return null;
+    var splits = one.lane.splits || [];
+    if (splits.length !== one.marks) return null;
+    var last = splits.length ? splits[splits.length - 1].second : 0;
+    return typeof last === "number" ? heat.startedAtMs + last * 1000 - offset : null;
   }
 
   // What both views read off a lane. The live server sends no progress inside a phase, so the current one is only named.
@@ -368,7 +603,9 @@
       lane: lane,
       rank: lane.rank,
       number: lane.lane,
+      marks: lane.phasesDone || 0,
       voided: voided,
+      closed: closed,
       result: result,
       done: done,
       blank: !closed && done === 0 && !splits.length,
@@ -378,43 +615,75 @@
     };
   }
 
-  function laneItem(one, total, heat) {
+  // A row: the lane's place, its pin, its name and what it is doing. With a track to see it on, it is the button that
+  // follows the lane.
+  function laneItem(one, total, heat, it) {
     var lane = one.lane;
     var item = el("li", "lane");
-    var top = el("div", "lane-top");
-    top.appendChild(el("span", "lane-no", t("lane").replace("{n}", lane.lane)));
-    top.appendChild(el("span", "lane-name", lane.entryName));
-    if (total) top.appendChild(el("span", "lane-count", (one.blank ? 0 : Math.min(one.done + 1, total)) + "/" + total));
-    item.appendChild(top);
-    // The lane's athletes, drawn by avatars.js; the stylesheet hides the stage while nothing is drawn in it.
-    var stage = el("div", "lane-stage");
-    stage.setAttribute("aria-hidden", "true");
-    item.appendChild(stage);
-    stages.push({
-      stage: stage, key: heat.heatId + ":" + lane.laneId, laneId: lane.laneId, lane: lane.lane, heat: heat, total: total,
-      done: one.done, current: one.current, blank: one.blank, closed: one.voided || !!one.result || !!lane.closed,
-      phase: lane.currentPhase,
-    });
-    if (total) {
-      var bar = el("div", "lane-bar");
-      bar.setAttribute("role", "img");
-      bar.setAttribute("aria-label", t("phases").replace("{done}", one.done).replace("{total}", total));
-      for (var i = 0; i < total; i++) {
-        var seg = el("span", "seg " + (i < one.done ? "done" : i === one.current && !one.blank ? "current" : "pending"));
-        if (i === one.current && !one.blank) seg.appendChild(el("span", "fill"));
-        bar.appendChild(seg);
-      }
-      item.appendChild(bar);
+    var row;
+    if (it && window.CatchUpAvatars) {
+      row = press("row:" + heat.heatId + ":" + lane.laneId, "lane-row", function () {
+        if (followed(heat.heatId) === lane.laneId) return window.CatchUpAvatars.home(heat.heatId);
+        window.CatchUpAvatars.follow(heat.heatId, lane.laneId);
+        var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        it.slot.scrollIntoView({ block: "nearest", behavior: calm ? "auto" : "smooth" });
+      });
+      row.setAttribute("data-lane", lane.laneId);
+      row.setAttribute("aria-pressed", followed(heat.heatId) === lane.laneId ? "true" : "false");
+    } else {
+      row = el("div", "lane-row");
     }
-    var foot = el("div", "lane-foot");
-    if (one.result) foot.appendChild(el("span", "lane-result", one.result.display));
-    else if (one.blank) foot.appendChild(el("span", "lane-phase blank", t("nomarks")));
-    else if (!one.voided) foot.appendChild(el("span", "lane-phase", lane.currentPhase || (one.done >= total && total ? t("finished") : "")));
-    if (one.voided) foot.appendChild(el("span", "void", t("void")));
-    // As the live server counts it: whatever is not validated, a review state this script does not know included, is provisional.
-    else if (one.result && lane.review !== "VALIDATED") foot.appendChild(el("span", "provisional", t("provisional")));
-    item.appendChild(foot);
+    item.appendChild(row);
+    row.appendChild(el("span", "lane-place" + (one.place && one.place.n === 1 ? " first" : ""), one.place ? one.place.text : ""));
+    var pin = el("span", "lane-pin", lane.lane);
+    pin.setAttribute("aria-hidden", "true");
+    pin.style.backgroundColor = PINS[(Math.max(1, Math.floor(+lane.lane || 1)) - 1) % PINS.length];
+    // Layout drops the spaces; a reader of the row's name needs them between one part and the next.
+    [pin, el("span", "said", t("lane").replace("{n}", lane.lane)), el("span", "lane-name", lane.entryName), laneSays(one, total, heat)]
+      .forEach(function (part) {
+        row.appendChild(document.createTextNode(" "));
+        row.appendChild(part);
+      });
     return item;
+  }
+
+  // The result once there is one; until then the phase under way and which of how many it is.
+  function laneSays(one, total, heat) {
+    var says = el("span", "lane-says");
+    if (one.voided) {
+      says.appendChild(el("span", "void", t("void")));
+    } else if (one.result) {
+      says.appendChild(el("span", "lane-result", one.result.display));
+      if (provisional(one)) {
+        var star = el("span", "lane-star", "*");
+        star.setAttribute("aria-hidden", "true");
+        says.appendChild(star);
+        says.appendChild(el("span", "said", " " + t("provisional")));
+      }
+    } else if (one.blank) {
+      says.appendChild(el("span", "lane-phase", t("nomarks")));
+    } else {
+      // The server counts an AMRAP's phases on and on: the row says the round under way.
+      var laps = heat.format === "AMRAP" && total > 0 && one.marks > 0 && !one.closed;
+      var done = laps ? one.marks % total : one.done;
+      var words = laps ? [t("round").replace("{n}", Math.floor(one.marks / total) + 1)] : [];
+      if (one.lane.currentPhase) words.push(one.lane.currentPhase);
+      else if (total && done >= total) words.push(t("finished"));
+      if (words.length) says.appendChild(el("span", "lane-phase", words.join(" · ")));
+      if (done < total) says.appendChild(el("span", "lane-count", (words.length ? " · " : "") + (done + 1) + "/" + total));
+    }
+    return says;
+  }
+
+  // As the live server counts it: whatever is not validated, a review state this script does not know included.
+  function provisional(one) { return !!one.result && !one.voided && one.lane.review !== "VALIDATED"; }
+
+  // What the asterisk is, once for the whole list: every result with one is a time, or they are results.
+  function laneNote(lanes, heat) {
+    var starred = lanes.filter(provisional);
+    if (!starred.length) return null;
+    var timed = heat.format === "FOR_TIME" && starred.every(function (one) { return one.result.finished; });
+    return el("p", "lane-note", t(timed ? "note-time" : "note-result"));
   }
 
   // Further on first; at the same phase, whoever got there first; a voided lane last.
@@ -527,9 +796,16 @@
   }
 
   function toggle(key, label, on, choose) {
-    var button = el("button", "toggle", label);
-    button.type = "button";
+    var button = press(key, "toggle", choose);
+    button.textContent = label;
     button.setAttribute("aria-pressed", on ? "true" : "false");
+    return button;
+  }
+
+  // A button that changes what is shown and redraws the panel, which keeps the focus on it by its key.
+  function press(key, className, choose) {
+    var button = el("button", className);
+    button.type = "button";
     button.setAttribute("data-key", key);
     button.addEventListener("click", function () {
       choose();
@@ -643,7 +919,7 @@
   // The heat's time on the server's clock: this device's clock may be minutes off, the offset from the last answer is not.
   function tickClocks() {
     var now = Date.now() + offset;
-    [].forEach.call(body.querySelectorAll(".live-clock"), function (clock) {
+    [].forEach.call(panel.querySelectorAll(".live-clock"), function (clock) {
       var elapsed = Math.max(0, Math.floor((now - +clock.getAttribute("data-started")) / 1000));
       var cap = clock.getAttribute("data-cap");
       if (cap !== null) elapsed = Math.min(elapsed, +cap);

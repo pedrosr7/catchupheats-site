@@ -1,7 +1,7 @@
-// The voxel athletes drawn in each lane's stage on the Live heat card. live.js loads this only once a heat is running in
-// the «Visual» view, and calls CatchUpAvatars.sync after every redraw. The stage is decoration (aria-hidden): the lane's
-// text, bar and times stay the source of truth, so anything that goes wrong here only leaves the stage empty.
-// Decisions: agents/docs/DECISIONS.md, 2026-11-21 «voxel athletes».
+// The running heat on the Live tab, drawn as one track with every lane, which the visitor moves like a map. live.js loads
+// this only once a heat is running in the «Visual» view, and calls CatchUpAvatars.sync after every redraw. The scene is
+// decoration (aria-hidden): the rows' text, bar and times stay the source of truth, so anything that goes wrong here only
+// leaves the rows alone. Decisions: agents/docs/DECISIONS.md, 2026-11-21 «voxel athletes» and 2026-11-22 «one track».
 (function () {
   "use strict";
 
@@ -145,46 +145,200 @@
     return LANE_COLOURS[(n - 1) % LANE_COLOURS.length];
   }
 
-  // ---- Where the team stands, and the run between pieces of the bar
+  // ---- The track: stations in phase order, in voxels. Teams walk along +z, lanes lie side by side along x
 
-  // x is a fraction of the bar's width: the centre of a piece, 0 for the start line.
-  function plan(lane) {
-    var total = lane.total || 0;
-    if (!total) return { x: 0.5, anim: "idle" };
-    if (lane.blank) return { x: 0, anim: "idle" };
-    if (lane.closed || lane.current < 0) {
-      var at = Math.max(1, Math.min(lane.done || 0, total));
-      return { x: (at - 0.5) / total, anim: "idle" };
-    }
-    return { x: (lane.current + 0.5) / total, anim: movementOf(lane.phase).anim };
+  var START = 34, GAP = 6, LEN = 84;
+
+  // A lone athlete needs less floor than a team of six, and past four lanes a phone needs narrower ones.
+  function layout(heat, lanes) {
+    var phases = (heat && heat.phases) || [], size = teamOf(heat, 0).length, n = Math.max(1, phases.length), tight = lanes > 4;
+    var lane = size === 1 ? (tight ? 40 : 46) : size === 2 && !tight ? 66 : tight ? 60 : 80;
+    var len = n <= 5 ? LEN : Math.max(size > 4 ? LEN : size > 2 ? 64 : 52, Math.round(LEN * 5 / n));
+    var texts = phases.length ? phases : [heat && heat.wodName];
+    var moves = texts.map(movementOf), format = (heat && heat.format) || "FOR_TIME";
+    return {
+      n: n, size: size, lanes: lanes, tight: tight, lane: lane, len: len, start: START, arch: START + n * len, wait: START - 30,
+      done: START + n * len + 30, end: START + n * len + 62,
+      // The live server counts an AMRAP's phases on and on, round after round, and any other WOD's that has no finish line.
+      laps: format !== "FOR_TIME",
+      // It sends no mark of a max-reps, interval or max-load WOD until its score, nor of one with no phases: waiting for one
+      // would be waiting to the end.
+      waits: phases.length > 0 && !/^MAX_/.test(format),
+      names: moves.map(function (m, i) { return String(m.movement || texts[i] || "").toUpperCase(); }),
+      anims: moves.map(function (m) { return m.anim; }),
+      props: moves.map(function (m) { return ANIMS[m.anim].prop || ""; }),
+    };
   }
 
-  var RUN_MS = 2400;
-  var RUN_MIN = 600;
-  var RUN_MOST = 2000;
+  function laneX(L, i) { return (i - (L.lanes - 1) / 2) * (L.lane + GAP); }
 
-  function advance(prev, next, now) {
-    if (!prev) return { from: next.x, to: next.x, t0: now, t1: now, anim: next.anim };
-    if (Math.abs(next.x - prev.to) < 1e-6) return { from: prev.from, to: prev.to, t0: prev.t0, t1: prev.t1, anim: next.anim };
-    var x = at(prev, now).x;
-    var ms = Math.max(RUN_MIN, Math.min(RUN_MOST, Math.abs(next.x - x) * RUN_MS));
-    return { from: x, to: next.x, t0: now, t1: now + ms, anim: next.anim };
+  // Where a lane is: slot -1 behind the start line, a station, or L.n past the arch; `lap` the round of it under way.
+  function place(lane, L) {
+    var marks = Math.max(0, Math.floor(+lane.done || 0)), lap = L.laps ? Math.floor(marks / L.n) : 0;
+    var slot = L.laps ? marks % L.n : Math.min(marks, lane.closed ? L.n : L.n - 1);
+    if (lane.closed && lane.finished && !lane.voided) slot = L.n;
+    else if (!marks && L.waits) slot = -1;
+    var working = slot >= 0 && slot < L.n && !lane.closed && !lane.voided;
+    return { slot: slot, lap: lap, anim: working ? L.anims[slot] : "idle", since: lane.since, key: lap * (L.n + 1) + slot };
   }
 
-  function at(state, now) {
-    if (now < state.t1) {
-      var s = (now - state.t0) / (state.t1 - state.t0);
-      var eased = s * s * (3 - 2 * s);
-      return { x: state.from + (state.to - state.from) * eased, anim: "run", running: true, right: state.to >= state.from };
+  // An estimate: the live server sends nothing inside a phase. Half the stretch in 25 s, ever slower, and never the end.
+  var RUN_HALF_MS = 25000;
+  function runShare(ms) { return ms > 0 ? ms / (ms + RUN_HALF_MS) : 0; }
+
+  function rest(p, L, now, since) {
+    if (p.slot < 0) return L.wait;
+    if (p.slot >= L.n) return L.done;
+    var middle = L.start + (p.slot + 0.5) * L.len;
+    if (p.anim !== "run") return middle;
+    return middle + L.len * (0.62 * (still ? 0.5 : runShare(now - (p.since === null || p.since === undefined ? since : p.since))) - 0.36);
+  }
+
+  // A closed phase sends the team running on; an undone mark is no run, and a lane seen for the first time is already there.
+  function advance(prev, next, now, L) {
+    if (!prev || next.key < prev.p.key) return { p: next, from: 0, t0: now, t1: now, lap: false };
+    if (next.key === prev.p.key) return { p: next, from: prev.from, t0: prev.t0, t1: prev.t1, lap: prev.lap };
+    var z = spot(prev, L, now).z, lap = next.lap > prev.p.lap && next.slot < L.n;
+    var to = rest(next, L, now, now), way = lap ? L.done - z + to - L.wait : to - z;
+    return { p: next, from: z, t0: now, t1: now + clamp(Math.abs(way) * 17, 900, 2600), lap: lap };
+  }
+
+  function spot(state, L, now) {
+    var to = rest(state.p, L, now, state.t1);
+    if (still || now >= state.t1) return { z: to, anim: state.p.anim, moving: false };
+    var t = (now - state.t0) / (state.t1 - state.t0), eased = t * t * (3 - 2 * t), z = state.from + (to - state.from) * eased;
+    if (state.lap) {
+      // A new round: on through the arch, and in again from the start.
+      var out = L.done - state.from, gone = eased * (out + to - L.wait);
+      z = gone < out ? state.from + gone : L.wait + gone - out;
     }
-    return { x: state.to, anim: state.anim, running: false, right: true };
+    return { z: z, anim: "run", moving: true };
+  }
+
+  // Who stands where around the station's middle, [across, along]: the animation's rows, two abreast where lanes are narrow.
+  function formation(anim, L) {
+    var f = ANIMS[anim].form, abreast = L.tight ? Math.min(2, f[0]) : f[0], spots = [];
+    var pitch = L.tight ? Math.min(26, f[1]) : f[1], shift = L.size > 1 && !L.tight ? f[3] : 0;
+    var rows = Math.ceil(L.size / abreast);
+    for (var i = 0; i < L.size; i++) {
+      var row = Math.floor(i / abreast), here = Math.min(abreast, L.size - row * abreast);
+      spots.push([((i % abreast) - (here - 1) / 2) * pitch + shift, ((rows - 1) / 2 - row) * f[2]]);
+    }
+    return spots;
+  }
+
+  // ---- The camera: the athletes' own, mirrored as they are, so +z runs right and down
+
+  function flat(x, y, z) { return [2 * (z - x), x + z - 2 * y]; }
+  function project(v, x, y, z) {
+    var p = flat(x, y, z);
+    return [v.x + v.s * p[0], v.y + v.s * p[1]];
+  }
+
+  // Head height in voxels, and the closest the camera comes.
+  var HEAD = 50, CLOSEST = 1.5;
+  // Below NEAR a lane's checks and painted names are noise; below PIN a team is its number; a followed one is seen at UP_CLOSE.
+  var NEAR = 0.34, PIN = 0.3, UP_CLOSE = 0.75;
+
+  // A camera is a scale and the flat point in the middle of the frame, so a frame that changes size keeps what it shows.
+  function sight(cam, w, h) { return { s: cam.s, x: w / 2 - cam.s * cam.x, y: h / 2 - cam.s * cam.y }; }
+
+  // The whole track: from behind the team that waits to the places past the end of every lane.
+  function whole(L, w, h) {
+    var x0 = laneX(L, 0) - L.lane / 2, x1 = -x0, z0 = L.wait - (L.size > 4 ? 36 : 26), z1 = L.end + 34;
+    var b = { l: 1e9, t: 1e9, r: -1e9, b: -1e9 };
+    [[x0, 0, z0], [x1, 0, z0], [x0, 0, z1], [x1, 0, z1], [x0, HEAD, z0], [x1, HEAD, L.end]].forEach(function (c) {
+      var p = flat(c[0], c[1], c[2]);
+      b.l = Math.min(b.l, p[0]); b.r = Math.max(b.r, p[0]); b.t = Math.min(b.t, p[1]); b.b = Math.max(b.b, p[1]);
+    });
+    var s = Math.min(CLOSEST, (w - 12) / (b.r - b.l), (h - 30) / (b.b - b.t));
+    return { s: s, x: (b.l + b.r) / 2, y: (b.t + b.b) / 2 - 4 / s };
+  }
+
+  // The middle of the frame stays on the floor: on all of it up close, on ever less of it the farther, until the whole track
+  // has only its own middle.
+  function fence(cam, L, w, h) {
+    var all = whole(L, w, h), s = clamp(cam.s, all.s, CLOSEST);
+    if (s <= all.s) return all;
+    var free = Math.min(1, s / all.s - 1), x0 = laneX(L, 0) - L.lane / 2;
+    function floor(p) { return [(p.y - p.x / 2) / 2, (p.y + p.x / 2) / 2]; }
+    var middle = floor(all), at = floor(cam), lo = [x0, -12], hi = [-x0, L.end + 34];
+    at = at.map(function (v, i) { return clamp(v, middle[i] + (lo[i] - middle[i]) * free, middle[i] + (hi[i] - middle[i]) * free); });
+    return { s: s, x: 2 * (at[1] - at[0]), y: at[0] + at[1] };
+  }
+
+  // Closer or farther, with the spot under the finger left under it.
+  function zoomAt(cam, factor, px, py, L, w, h) {
+    var s = clamp(cam.s * factor, whole(L, w, h).s, CLOSEST), dx = px - w / 2, dy = py - h / 2;
+    return fence({ s: s, x: cam.x + dx / cam.s - dx / s, y: cam.y + dy / cam.s - dy / s }, L, w, h);
+  }
+
+  // A followed team that comes round to the start is a cut, never a swing across the whole track.
+  function cuts(L, from, to) { return Math.abs(to - from) > L.len * 1.8; }
+
+  // With few lanes the names fit at any scale.
+  function pinned(L, s) { return L.lanes > 4 && s < PIN; }
+
+  // Number and name over each team, the name cut to the room there is; past eight lanes on a phone, the number alone. The
+  // place, where there is one, goes before it. `blocked` are the controls' boxes.
+  function tags(list, w, h, measure, blocked) {
+    var roomy = w >= 640, most = list.length <= 4 ? 112 : list.length <= 6 ? 92 : list.length <= 8 ? 80 : roomy ? 60 : 0;
+    if (roomy) most *= 1.6;
+    var tall = 16, set = [];
+    list.forEach(function (one) {
+      var number = String(one.lane), name = String(one.name || "").toUpperCase(), text = number;
+      if (most) {
+        text = number + " " + name;
+        while (name.length > 1 && measure(text) + 10 > most) {
+          name = name.slice(0, -1);
+          text = number + " " + name.replace(/\s+$/, "") + "…";
+        }
+      }
+      var beside = one.place ? Math.ceil(measure(one.place)) + 10 : 0;
+      var wide = Math.ceil(measure(text)) + 10 + beside, taken = function (o) {
+        return x < o.x + o.w && o.x < x + wide && y < o.y + o.h && o.y < y + tall;
+      };
+      var x = clamp(one.px - wide / 2, 0, w - wide), y0 = one.py - tall, y = clamp(y0, 0, h - tall);
+      for (var k = 1; k < 2 * h / tall && (set.some(taken) || blocked.some(taken)); k++) {
+        y = clamp(y0 + (k & 1 ? -1 : 1) * Math.ceil(k / 2) * (tall + 1), 0, h - tall);
+      }
+      set.push({ lane: one.lane, text: text, x: x, y: y, w: wide, h: tall, placeWide: beside });
+    });
+    return set;
+  }
+
+  // Where the teams out of the frame stand on its edge: each as near as it can to where it is, walking along the edge past
+  // whatever is already there.
+  function edges(list, w, h, blocked) {
+    var M = 16, W = w - 2 * M, H = h - 2 * M, round = 2 * (W + H), set = [];
+    function at(t) {
+      t = ((t % round) + round) % round;
+      if (t < W) return { x: M + t, y: M };
+      if (t < W + H) return { x: w - M, y: M + t - W };
+      if (t < 2 * W + H) return { x: w - M - (t - W - H), y: h - M };
+      return { x: M, y: h - M - (t - 2 * W - H) };
+    }
+    function taken(p) {
+      return set.some(function (o) { return Math.hypot(o.x - p.x, o.y - p.y) < 24; }) || blocked.some(function (b) {
+        return p.x + 12 > b.x && p.x - 12 < b.x + b.w && p.y + 12 > b.y && p.y - 12 < b.y + b.h;
+      });
+    }
+    list.forEach(function (one) {
+      var x = clamp(one.px, M, w - M), y = clamp(one.py, M, h - M);
+      var t = y === M ? x - M : x === w - M ? W + y - M : y === h - M ? W + H + w - M - x : 2 * W + H + h - M - y, p = at(t);
+      for (var k = 1; k < round / 2 && taken(p); k++) p = at(t + (k & 1 ? -2 : 2) * Math.ceil(k / 2));
+      set.push({ x: p.x, y: p.y, angle: Math.atan2(one.py - p.y, one.px - p.x) });
+    });
+    return set;
   }
 
   // ---- Phone safety
 
-  // Above this average time per drawn frame the stage steps down: every other frame, then every fourth, then nothing.
+  // Above this average time per drawn frame the scene steps down: fewer frames, then nothing.
   var BUDGET_MS = 20;
   var LEVELS = 3;
+
+  function keeps(level) { return { stride: [1, 2, 4, 4][level], scene: level < LEVELS }; }
 
   function degrade(level, averageMs) {
     return averageMs > BUDGET_MS ? Math.min(LEVELS, level + 1) : level;
@@ -327,18 +481,18 @@
   }
 
   // The animation registry. Adding one is a pose function, its frame count and its team spacing; the bone test covers
-  // every entry on its own. `still` is the frame shown to visitors who ask for less motion; `step` the team's spacing in
-  // voxels; `bar` draws a loaded barbell in the hands, `rig` a pull-up station; `rise` lifts the team's floor, in
-  // pixels, for a movement that lies down towards the viewer.
+  // every entry on its own. `still` is the frame shown to visitors who ask for less motion; `form` the team's place on a
+  // station (abreast, spacing across, spacing along, shift that leaves room for the painted name); `bar` draws a loaded
+  // barbell in the hands, `rig` a pull-up station; `prop` is the equipment left there when nobody is using it.
   var ANIMS = {};
   function register(id, def) { ANIMS[id] = def; }
-  register("run", { N: 16, pose: run, step: [12, -6], still: 4 });
-  register("snatch", { N: 40, pose: spline(SNATCH, 40), step: [10, -12], bar: 1, still: 24 });
-  register("burpee", { N: 36, pose: withArms(spline(BURPEE, 36), [0.9, -0.25, -0.6]), step: [11, -11], rise: 10, still: 29 });
-  register("pullup", { N: 28, pose: spline(PULL, 28), step: [10, -10], rig: 1, still: 14 });
-  register("squat", { N: 24, pose: spline(SQUAT, 24), step: [11, -7], still: 12 });
-  register("generic", { N: 24, pose: spline(GENERIC, 24), step: [11, -7], still: 12 });
-  register("idle", { N: 16, pose: spline(IDLE, 16), step: [11, -7], still: 0 });
+  register("run", { N: 16, pose: run, form: [2, 18, 18, 0], prop: "cones", still: 4 });
+  register("snatch", { N: 40, pose: spline(SNATCH, 40), form: [2, 30, 26, -4], bar: 1, prop: "bar", still: 24 });
+  register("burpee", { N: 36, pose: withArms(spline(BURPEE, 36), [0.9, -0.25, -0.6]), form: [4, 15, 34, 0], still: 29 });
+  register("pullup", { N: 28, pose: spline(PULL, 28), form: [4, 17, 30, 0], rig: 1, prop: "rig", still: 14 });
+  register("squat", { N: 24, pose: spline(SQUAT, 24), form: [2, 28, 18, -4], still: 12 });
+  register("generic", { N: 24, pose: spline(GENERIC, 24), form: [2, 28, 18, -4], still: 12 });
+  register("idle", { N: 16, pose: spline(IDLE, 16), form: [2, 24, 16, 0], still: 0 });
 
   // ---- Bodies and the three styles
 
@@ -369,7 +523,7 @@
   var RETRO_MAN = assign(thicker(MAN, 0.12), { hr: 1.5, shoe: [9, 1.75, 1.5] });
   var RETRO_WOMAN = assign(thicker(WOMAN, 0.12), { hr: 1.4, shoe: [9, 1.65, 1.4] });
 
-  // A man stands about 70 px tall on the stage, a woman about 6% less; a team on pull-up stations fits its 120 px.
+  // A man stands about 70 px tall at scale 1, a woman about 6% less.
   var K_MAN = 1.2, K_WOMAN = 1.128;
 
   // Colour ids: 1 orange, 2 shorts, 3 cream, 4 steel, 5 ink, 6 dark steel, 7 sole, 8 knee sleeve, 9 shoe, 10-13 skin,
@@ -762,29 +916,84 @@
     return { cv: cv, x: x0 - PAD, y: y0b - PAD, sh: sc, sx: a0, sy: b0, bytes: (cv.width * cv.height + sc.width * sc.height) * 4 };
   }
 
-  // ---- The stages
-
-  var STAGE_HEIGHT = 120;
-  // A voxel is 2 px, one backing pixel per CSS pixel, scaled up crisp by the stylesheet: a frame costs a quarter of a
-  // sharper canvas, so the cache holds a whole screen of lanes on a phone.
+  // A voxel is 2 px of its sprite; the track draws the same sprites at every scale.
   var VOXEL = 2;
-  // From the stage's bottom to the floor the athletes stand on: room for the front athlete's feet and shadow.
-  var FLOOR = 14;
-  // Half an athlete's width on the stage, arms out, to keep the team inside it.
-  var ATHLETE_HALF = 26;
+
+  // ---- Equipment, baked by the same engine around the middle of its station
+
+  function barbell(x, z, sty) {
+    var gd = sty.G[0], half = 6.2 * gd.k + 3.4, at = [C + Math.round(x), 4, C + Math.round(z)];
+    cylinder(at, half, 1, 4);
+    [-1, 1].forEach(function (side) {
+      cylinder([at[0] + side * (half - 1.5), at[1], at[2]], 1, gd.pl, 1);
+      cylinder([at[0] + side * (half - 3.5), at[1], at[2]], 1, gd.pl * 0.37, 3);
+    });
+  }
+  function box(x0, y0, z0, w, h, d, c) {
+    for (var x = 0; x < w; x++) for (var y = 0; y < h; y++) for (var z = 0; z < d; z++) put(C + x0 + x, y0 + y, C + z0 + z, c);
+  }
+  var PROPS = {
+    bar: function (L, sty) { formation("snatch", L).forEach(function (f) { barbell(f[0], f[1], sty); }); },
+    rig: function (L, sty) {
+      var by = Math.round(barY(sty));
+      formation("pullup", L).forEach(function (f) {
+        var x = Math.round(f[0]), z = Math.round(f[1]);
+        cylinder([C + x, by, C + z], RIG_HALF + 1, 1, 4);
+        [-RIG_HALF, RIG_HALF].forEach(function (px) { box(x + px - 2, 0, z - 2, 4, 1, 4, 6); box(x + px - 1, 1, z - 1, 2, by + 1, 2, 1); });
+      });
+    },
+    cones: function (L) {
+      [-1, 0, 1].forEach(function (k) {
+        var x = 6 - Math.round(L.lane / 2), z = Math.round(k * Math.min(30, L.len * 0.32));
+        for (var y = 0; y < 9; y++) {
+          var r = Math.max(0, Math.round(3 - y * 0.36));
+          box(x - r, y, z - r, 2 * r + 1, 1, 2 * r + 1, y > 3 && y < 6 ? 3 : 1);
+        }
+      });
+    },
+    arch: function (L, sty, tc) {
+      var half = L.lane / 2 - 3, x;
+      [-half, half - 3].forEach(function (px) { for (var y = 0; y < 48; y += 4) box(px, y, 0, 3, 4, 3, y & 4 ? 5 : 3); });
+      for (x = -half; x < half; x += 4) for (var row = 0; row < 2; row++) {
+        box(x, 44 + row * 4, 0, Math.min(4, half - x), 4, 3, ((x + half) / 4 + row) & 1 ? 5 : 3);
+      }
+      box(-half, 52, 0, 2 * half, 2, 3, 26 + tc);
+    },
+  };
+
+  // ---- The scenes
+
   var FPS = 12;
   var BAKE_MS = 8;
   var MEMORY = 24 << 20;
   var WINDOW = 24;
+  // One baked frame of one athlete, and the frames of a mean movement.
+  var SPRITE = 29000, CYCLE = 26;
+  // Past two backing pixels per CSS pixel nobody tells the difference and a phone pays for it in fill.
+  var SHARPEST = 2;
+
+  // What a loop of that many athletes holds in the cache.
+  function need(athletes) { return athletes * Math.ceil(CYCLE / trackStride(athletes)) * SPRITE; }
+
+  // Every frame of a team or two, and fewer distinct frames the more athletes in view: a cache smaller than one loop would
+  // bake for ever. The margin is the sprites of the teams just gone out of view, and the equipment.
+  function trackStride(athletes) {
+    var stride = athletes <= 8 ? 1 : 2;
+    while (stride < 16 && athletes * Math.ceil(CYCLE / stride) * SPRITE > MEMORY * 0.8) stride *= 2;
+    return stride;
+  }
 
   var cache = new Lru(MEMORY);
-  var lanes = new Map();
+  var scenes = new Map();
   var styleId = "det";
   var level = 0;
+  var onLevel = null;
   var timer = null;
-  var tick = 0;
-  var spent = [];
+  var onView = null;
   var frames = 0;
+  var gestures = 0;
+  var spent = [];
+  var samples = [];
   var still = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   // What the observer has said about each canvas: in sight or not. One it has not reported on yet is drawn.
   var inSight = new Map();
@@ -793,120 +1002,675 @@
     start();
   }) : null;
 
-  // Stepping down: every other frame, then every fourth, then no stage at all.
-  function stride() { return [1, 2, 4][Math.min(level, 2)]; }
-
-  function entry(mvId, frame, v, tc, budget) {
-    var key = [styleId, mvId, frame, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc].join(":");
+  function baked(key, budget, fill) {
     var hit = cache.get(key);
     if (hit) return hit.value;
-    if (budget && budget.left() <= 0) return null;
-    var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, frame);
+    if (budget.left() <= 0) return null;
     ln = 0;
-    raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, frame - 1).py);
-    var baked = bake(sty, camera(VOXEL));
-    cache.put(key, baked, baked.bytes);
-    return baked;
+    fill();
+    var made = bake(STYLES[styleId], camera(VOXEL));
+    cache.put(key, made, made.bytes);
+    return made;
   }
 
-  function draw(one, now, budget) {
-    var cv = one.canvas;
-    if (!cv.isConnected) return false;
-    var width = cv.clientWidth || cv.parentNode.clientWidth;
-    if (!width) return false;
-    if (cv.width !== width || cv.height !== STAGE_HEIGHT) {
-      cv.width = width;
-      cv.height = STAGE_HEIGHT;
+  function athlete(mvId, at, v, tc, budget) {
+    return baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc].join(":"), budget, function () {
+      var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
+      raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
+    });
+  }
+
+  function equipment(id, L, tc, budget) {
+    return baked([styleId, id, L.size, L.lane, L.len, tc].join(":"), budget, function () { PROPS[id](L, STYLES[styleId], tc); });
+  }
+
+  function rgba(hex, a) {
+    return "rgba(" + [1, 3, 5].map(function (i) { return parseInt(hex.slice(i, i + 2), 16); }).join() + "," + a + ")";
+  }
+
+  var DISPLAY = "'HelveticaNeue-CondensedBlack','Helvetica Neue',Roboto,'Arial Narrow',sans-serif";
+  var GROUND = "#0b0a0a", MAT = "rgba(242,238,230,.05)", INK = "#14110f", PAPER = "#f2eee6", HEAT = "#ff4a1c";
+
+  // The canvas at its own size, cleared, for a view in CSS pixels. MOST_PIXELS is for a full screen on a desktop.
+  var MOST_PIXELS = 4e6;
+  function open(cv, opaque) {
+    var w = cv.clientWidth, h = cv.clientHeight;
+    if (!cv.isConnected || !w || !h) return null;
+    var d = Math.min(SHARPEST, window.devicePixelRatio || 1, Math.sqrt(MOST_PIXELS / (w * h))), W = Math.round(w * d), H = Math.round(h * d);
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    var c = cv.getContext("2d", { alpha: !opaque });
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.fillStyle = GROUND;
+    c.fillRect(0, 0, W, H);
+    return { c: c, w: w, h: h, d: d };
+  }
+
+  // One lane's floor. With the floor's own transform every mark on it is an upright rectangle: [along, across].
+  function lie(o, v, x) {
+    var s = v.s * o.d;
+    o.c.setTransform(2 * s, s, -2 * s, s, (v.x - 2 * v.s * x) * o.d, (v.y + v.s * x) * o.d);
+  }
+
+  // The stretch of a lane, along z, that the frame shows.
+  function shownOf(o, v, L, x) {
+    var half = L.lane / 2;
+    return [
+      Math.max(-v.x / (2 * v.s) + x, -v.y / v.s - x) - half,
+      Math.min((o.w - v.x) / (2 * v.s) + x, (o.h - v.y) / v.s - x) + half,
+    ];
+  }
+
+  function floor(o, v, L, one, x, near) {
+    var c = o.c, half = L.lane / 2, colour = LANE_COLOURS[one.tc], at = one.at, p = one.state.p, i, k, a, seen = shownOf(o, v, L, x);
+    if (seen[0] > L.end || seen[1] < -12 || seen[0] > seen[1]) return;
+    lie(o, v, x);
+    function tile(z, y, len, wide, fill) { c.fillStyle = fill; c.fillRect(z, y, len, wide); }
+    tile(-12, -half, L.end + 12, L.lane, "#1c1a19");
+    for (i = Math.max(0, Math.floor((seen[0] + 12) / 16)); near && -12 + i * 16 < Math.min(L.end, seen[1]); i++) {
+      for (k = i & 1; k * 16 < L.lane; k += 2) {
+        tile(-12 + i * 16, -half + k * 16, Math.min(16, L.end + 12 - i * 16), Math.min(16, L.lane - k * 16), "#211f1d");
+      }
     }
-    var ctx = cv.getContext("2d"), E = camera(VOXEL).e;
-    var spot = still ? { x: one.state.to, anim: one.state.anim, running: false, right: true } : at(one.state, now);
-    var mv = ANIMS[spot.anim] || ANIMS.generic, N = mv.N, size = one.team.length;
-    var step = mv.step, spread = 1;
-    // The team spans at most 60% of the stage; pull-up stations keep their spacing, or they would overlap.
-    var span = Math.abs((size - 1) * (E[0][0] * step[0] + E[2][0] * step[1]));
-    if (!mv.rig && span > 0) spread = Math.min(1, (0.6 * cv.width) / span);
-    var placed = [], missing = false;
-    for (var i = 0; i < size; i++) {
-      var c = i - (size - 1) / 2, gx = Math.round(c * step[0] * spread), gz = Math.round(c * step[1] * spread);
-      var frame = still ? mv.still : (((Math.floor(tick / stride()) * stride() + i * (N >> 2)) % N) + N) % N;
-      frame -= frame % stride();
-      var baked = entry(spot.anim, frame, assign({ n: i % 4 }, one.team[i]), one.tc, still ? null : budget);
-      if (!baked) {
-        baked = one.last[i];
-        missing = true;
-      } else if (one.last[i] !== baked) one.last[i] = baked;
-      if (baked) placed.push({ gx: gx, gz: gz, dx: E[0][0] * gx + E[2][0] * gz, dy: E[0][1] * gx + E[2][1] * gz, e: baked });
+    for (i = 0; i < L.n; i++) {
+      a = L.start + i * L.len;
+      if (a > seen[1] || a + L.len < seen[0]) continue;
+      var lit = p.slot === i && !at.moving;
+      tile(a + 3, -half + 5, L.len - 6, L.lane - 10, lit ? rgba(colour, 0.24) : p.slot > i ? rgba(colour, 0.11) : MAT);
+      if (i) tile(a - 1, -half, 2, L.lane, "rgba(242,238,230,.28)");
+      if (near) paint(c, L.names[i], a + L.len / 2, half - 10, L.len - 8, 12, lit ? colour : "rgba(242,238,230,.4)");
     }
-    placed.sort(function (a, b) { return a.gx + a.gz - (b.gx + b.gz); });
-    // Placed by the formation, never by a frame's own size, so the team neither bobs nor slides as it moves. The floor
-    // line stays put: a jump's raised hands may touch the top.
-    var reach = Math.abs((size - 1) / 2 * (E[0][0] * step[0] + E[2][0] * step[1]) * spread);
-    var half = reach + ATHLETE_HALF, mid = 0;
-    var oy = cv.height - FLOOR - (mv.rise || 0);
-    var cx = clamp(spot.x * cv.width, half + 2, Math.max(half + 2, cv.width - half - 2));
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    // The camera looks at their left side, so drawn as they are they face left: mirrored, they face the way the bar fills.
-    var face = spot.right ? -1 : 1;
-    ctx.setTransform(face, 0, 0, 1, cx - face * mid, oy);
-    placed.forEach(function (p) { ctx.drawImage(p.e.sh, p.e.sx + p.dx, p.e.sy + p.dy); });
-    placed.forEach(function (p) { ctx.drawImage(p.e.cv, p.e.x + p.dx, p.e.y + p.dy); });
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    one.complete = !missing;
-    return placed.length > 0;
+    for (i = 0; i * 8 < L.lane; i++) for (k = 0; k < 2; k++) {
+      tile(L.arch + k * 5, -half + i * 8, 5, Math.min(8, L.lane - i * 8), (i + k) & 1 ? PAPER : INK);
+    }
+    tile(L.start - 3, -half, 4, L.lane, PAPER);
+    tile(-12, -half, L.end + 12, 3, colour);
+    tile(-12, half - 3, L.end + 12, 3, colour);
+  }
+
+  // A station's name on its floor, shrunk to its station and then cut.
+  function paint(c, text, z, x, room, most, fill) {
+    c.font = "900 " + most + "px " + DISPLAY;
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    var size = clamp(most * room / (c.measureText(text).width || 1), 7, most);
+    c.font = "900 " + size + "px " + DISPLAY;
+    while (text.length > 2 && c.measureText(text).width > room) text = text.slice(0, -2).replace(/\s+$/, "") + "…";
+    c.fillStyle = fill;
+    c.fillText(text, z, x);
+  }
+
+  // The equipment nobody is using, and the arch: none that stands out of the frame, however tall.
+  function stand(list, o, v, L, one, x, budget) {
+    var seen = shownOf(o, v, L, x), from = seen[0] - 60, to = seen[1] + 130;
+    for (var i = 0; i < L.n; i++) {
+      var id = L.props[i], z = L.start + (i + 0.5) * L.len, busy = one.state.p.slot === i && !one.at.moving && one.at.anim !== "idle";
+      if (!id || (busy && id !== "cones") || z < from || z > to) continue;
+      add3(list, equipment(id, L, 0, budget), x, z, id === "bar" ? 0 : -24);
+    }
+    if (L.arch >= from && L.arch <= to) add3(list, equipment("arch", L, one.tc, budget), x, L.arch + 3, -10);
+  }
+  function add3(list, e, x, z, bias) { if (e) list.push({ e: e, x: x, z: z, depth: x + z + (bias || 0) }); }
+
+  function team(list, L, one, x, budget, stride, tick) {
+    var mv = ANIMS[one.at.anim], spots = formation(one.at.anim, L), whole = true;
+    one.team.forEach(function (who, i) {
+      var f = still ? mv.still : (tick + i * (mv.N >> 2)) % mv.N;
+      if (!still) f -= f % stride;
+      var e = athlete(one.at.anim, f, who, one.tc, budget);
+      if (e) one.last[i] = e;
+      else whole = false;
+      add3(list, one.last[i], x + spots[i][0], one.at.z + spots[i][1], 0);
+    });
+    return whole;
+  }
+
+  // Shadows first, then everything from the back to the front.
+  function flush(o, v, list) {
+    var c = o.c, s = v.s * o.d;
+    c.imageSmoothingEnabled = s < 1.99;
+    list.sort(function (a, b) { return a.depth - b.depth; });
+    ["sh", "cv"].forEach(function (layer) {
+      list.forEach(function (t) {
+        var p = project(v, t.x, 0, t.z), e = t.e, x = p[0] * o.d, y = p[1] * o.d;
+        if (x < -90 * s || x > o.w * o.d + 90 * s || y < -60 * s || y > o.h * o.d + 130 * s) return;
+        // Drawn as they are they would face left: mirrored, they face the way they run.
+        c.setTransform(-s, 0, 0, s, Math.round(x), Math.round(y));
+        if (layer === "sh") c.drawImage(e.sh, e.sx, e.sy);
+        else c.drawImage(e.cv, e.x, e.y);
+      });
+    });
+  }
+
+  function ease(from, to, ms, pace) { return to + (from - to) * Math.exp(-ms / pace); }
+
+  // Where a followed team puts the camera: the team a little under the middle, which leaves its tag room.
+  function following(sc, m, w, h) {
+    var i = sc.lanes.findIndex(function (one) { return one.id === m.id; }), L = sc.L, z = sc.lanes[i].at.z;
+    var p = flat(laneX(L, i), 20, z), cut = m.z !== null && cuts(L, m.z, z), s = clamp(m.want, whole(L, w, h).s, CLOSEST);
+    m.z = z;
+    return { cam: fence({ s: s, x: p[0], y: p[1] - 0.05 * h / s }, L, w, h), cut: cut };
+  }
+
+  // Moves the camera on towards what its mode asks for, and says whether it is still on its way.
+  function steer(sc, w, h, now) {
+    var m = sc.map, ms = Math.min(200, now - sc.seen), want = null, cut = false;
+    if (m.mode === "whole") want = whole(sc.L, w, h);
+    else if (m.mode === "follow") {
+      var to = following(sc, m, w, h);
+      want = to.cam;
+      cut = to.cut;
+    } else {
+      want = fence(m.to || m.cam, sc.L, w, h);
+    }
+    var resized = m.w !== w || m.h !== h;
+    m.w = w;
+    m.h = h;
+    if (!m.cam || still || cut || (resized && m.mode !== "follow") || (m.mode === "free" && !m.to)) {
+      m.cam = want;
+      m.to = null;
+      return false;
+    }
+    var pace = m.mode === "whole" ? 260 : 170, cam = {};
+    ["s", "x", "y"].forEach(function (k) { cam[k] = ease(m.cam[k], want[k], ms, pace); });
+    if (Math.abs(cam.s - want.s) < 0.002 && (Math.abs(cam.x - want.x) + Math.abs(cam.y - want.y)) * want.s < 0.5) {
+      m.cam = want;
+      m.to = null;
+      return false;
+    }
+    m.cam = cam;
+    return true;
+  }
+
+  // The controls over the drawing, in its own pixels: nothing that has to be read goes under them.
+  function controls(sc, cv) {
+    var box = cv.parentNode && cv.parentNode.parentNode, at = cv.getBoundingClientRect(), set = [];
+    [].forEach.call((box && box.querySelectorAll("button, .track-hint")) || [], function (one) {
+      var r = one.getBoundingClientRect();
+      if (r.width) set.push({ x: r.left - at.left, y: r.top - at.top, w: r.width, h: r.height });
+    });
+    return set;
+  }
+
+  // `quick` is a gesture's own frame, sixty a second: it keeps every second sprite, so none is baked to be seen for 16 ms.
+  function drawTrack(sc, now, budget, stride, tick, quick) {
+    var o = open(sc.canvas, true);
+    if (!o) return false;
+    var L = sc.L, busy = steer(sc, o.w, o.h, now), v = sight(sc.map.cam, o.w, o.h), near = v.s >= NEAR;
+    var list = [], full = true, reach = 70 * v.s, count = sc.lanes.length;
+    sc.seen = now;
+    sc.tick = tick;
+    sc.shown = 0;
+    sc.lanes.forEach(function (one, i) {
+      var p = project(v, laneX(L, i), 24, one.at.z);
+      one.on = p[0] > -reach && p[0] < o.w + reach && p[1] > -reach && p[1] < o.h + reach;
+      if (one.on) sc.shown++;
+    });
+    stride = Math.max(quick ? 2 : 1, stride, trackStride(athletesShown()));
+    sc.lanes.forEach(function (one, i) { floor(o, v, L, one, laneX(L, i), near); });
+    if (!near) {
+      // Too small to read on every lane: once, larger, on the floor in front of the nearest one.
+      lie(o, v, laneX(L, count - 1) + L.lane / 2);
+      for (var n = 0; n < L.n; n++) paint(o.c, L.names[n], L.start + (n + 0.5) * L.len, 16, L.len - 8, 24, "rgba(242,238,230,.72)");
+    }
+    sc.lanes.forEach(function (one, i) { stand(list, o, v, L, one, laneX(L, i), budget); });
+    // A different lane first each time, so on a slow phone every team gets its turn to be baked.
+    for (var k = 0; k < count; k++) {
+      var i = (k + tick) % count;
+      if (sc.lanes[i].on && !team(list, L, sc.lanes[i], laneX(L, i), budget, stride, tick)) full = false;
+    }
+    flush(o, v, list);
+    var blocked = controls(sc, sc.canvas), popping = ends(o, sc, v, now);
+    label(o, sc, v, blocked);
+    sc.whole = full;
+    sc.frames++;
+    // With less motion nothing else will draw what a small budget left out.
+    sc.busy = busy || popping || (still && !full);
+    return true;
+  }
+
+  function athletesShown() {
+    var all = 0;
+    scenes.forEach(function (sc) { if (visible(sc.canvas)) all += sc.shown * sc.L.size; });
+    return all;
+  }
+
+  // Each lane's place past its end. A new one is drawn bigger and settles; says whether one is still settling.
+  var POP_MS = 260, SETTLED_MS = 1100;
+  function ends(o, sc, v, now) {
+    var c = o.c, L = sc.L, popping = false, pitch = (L.lane + GAP) * v.s, plain = clamp(58 * v.s, L.lanes > 8 ? 11 : 14, 40);
+    c.setTransform(o.d, 0, 0, o.d, 0, 0);
+    c.font = "900 " + plain + "px " + DISPLAY;
+    // The lanes' ends are 2 across for 1 down: where one would be written over the next, the numbers alone.
+    var short = pitch < plain * 0.85 && sc.lanes.some(function (one) {
+      return one.place && 2 * pitch < c.measureText(one.place.text).width * 0.9;
+    });
+    c.textAlign = "center";
+    c.textBaseline = "middle";
+    c.lineJoin = "round";
+    sc.lanes.forEach(function (one, i) {
+      one.ended = false;
+      if (!one.place) return;
+      var p = project(v, laneX(L, i), 0, L.end + 17), size = plain, text = short ? String(one.place.n) : one.place.text;
+      one.ended = p[0] > 0 && p[0] < o.w && p[1] > 0 && p[1] < o.h;
+      if (!one.ended) return;
+      var since = now - one.popped, pop = still || since > SETTLED_MS ? 0 : 0.6 * Math.exp(-since / POP_MS);
+      if (pop) popping = true;
+      size *= 1 + pop;
+      c.font = "900 " + size + "px " + DISPLAY;
+      c.lineWidth = Math.max(3, size / 5);
+      c.strokeStyle = GROUND;
+      c.strokeText(text, p[0], p[1]);
+      c.fillStyle = one.place.n === 1 ? HEAT : one.place.n <= 3 ? PAPER : "rgba(242,238,230,.62)";
+      c.fillText(text, p[0], p[1]);
+    });
+    return popping;
+  }
+
+  // Who is who: a number or a tag over each team in the frame, and a number on its edge for the rest. `sc.pins` is what a
+  // finger can touch.
+  function label(o, sc, v, blocked) {
+    var c = o.c, L = sc.L, inside = [], outside = [], pins = [], followed = sc.map.mode === "follow" ? sc.map.id : null;
+    sc.lanes.forEach(function (one, i) {
+      var head = project(v, laneX(L, i), HEAD - 4, one.at.z), feet = project(v, laneX(L, i), 20, one.at.z);
+      var seen = feet[0] > 4 && feet[0] < o.w - 4 && feet[1] > 4 && feet[1] < o.h - 4, at = seen ? head : feet;
+      (seen ? inside : outside).push({
+        one: one, lane: one.lane, name: one.name, px: at[0], py: at[1], place: one.place && !one.ended ? one.place.text : "",
+      });
+    });
+    c.textBaseline = "middle";
+    if (pinned(L, v.s)) {
+      c.font = "900 13px " + DISPLAY;
+      c.textAlign = "center";
+      inside.forEach(function (t) {
+        var x = clamp(t.px, 12, o.w - 12), y = clamp(t.py - 9, 12, o.h - 12);
+        pin(c, t.one, x, y, 10.5, t.one.id === followed);
+        pins.push({ id: t.one.id, x: x, y: y, w: 24, h: 24, edge: false });
+      });
+    } else {
+      c.font = "900 12px " + DISPLAY;
+      c.textAlign = "left";
+      tags(inside, o.w, o.h, function (t) { return c.measureText(t).width; }, blocked).forEach(function (tag, i) {
+        var one = inside[i].one, x = tag.x + tag.placeWide, middle = tag.y + tag.h / 2 + 0.5;
+        c.fillStyle = LANE_COLOURS[one.tc];
+        c.fillRect(x, tag.y, tag.w - tag.placeWide, tag.h);
+        c.fillStyle = INK;
+        c.fillText(tag.text, x + 5, middle);
+        if (tag.placeWide) {
+          c.fillStyle = one.place.n === 1 ? HEAT : PAPER;
+          c.fillRect(tag.x, tag.y, tag.placeWide, tag.h);
+          c.fillStyle = INK;
+          c.fillText(inside[i].place, tag.x + 5, middle);
+        }
+        pins.push({ id: one.id, x: tag.x + tag.w / 2, y: tag.y + tag.h / 2, w: tag.w, h: tag.h, edge: false });
+      });
+    }
+    c.font = "900 12px " + DISPLAY;
+    c.textAlign = "center";
+    var taken = pins.map(function (p) { return { x: p.x - p.w / 2, y: p.y - p.h / 2, w: p.w, h: p.h }; });
+    edges(outside, o.w, o.h, blocked.concat(taken)).forEach(function (p, i) {
+      var one = outside[i].one;
+      function tip(angle, far) { return [p.x + Math.cos(angle) * far, p.y + Math.sin(angle) * far]; }
+      c.fillStyle = LANE_COLOURS[one.tc];
+      c.beginPath();
+      [tip(p.angle, 15), tip(p.angle + 0.6, 9), tip(p.angle - 0.6, 9)].forEach(function (q) { c.lineTo(q[0], q[1]); });
+      c.fill();
+      pin(c, one, p.x, p.y, 10, one.id === followed);
+      pins.push({ id: one.id, x: p.x, y: p.y, w: 24, h: 24, edge: true });
+    });
+    sc.pins = pins;
+  }
+
+  function pin(c, one, x, y, radius, ring) {
+    [[ring ? PAPER : INK, radius + 1.5], [LANE_COLOURS[one.tc], radius]].forEach(function (disc) {
+      c.fillStyle = disc[0];
+      c.beginPath();
+      c.arc(x, y, disc[1], 0, 2 * Math.PI);
+      c.fill();
+    });
+    c.fillStyle = INK;
+    c.fillText(String(one.lane), x, y + 0.5);
+  }
+
+  // ---- The visitor's view of each heat: whole, free or following a lane
+
+  // Kept by heat for as long as it is on the floor, whatever the card does: redrawn, in «Tiempos», on full screen.
+  function tell(sc) {
+    var said = sc.map.mode + sc.map.id;
+    if (said === sc.told) return;
+    sc.told = said;
+    if (onView) onView(sc.key);
+  }
+
+  function letGo(sc) {
+    var m = sc.map;
+    m.mode = "free";
+    m.id = m.to = m.z = null;
+    m.vx = m.vy = 0;
+  }
+
+  // Back at the whole track one finger scrolls the page again.
+  function settle(sc) {
+    if (sc.map.mode !== "free") return;
+    var to = sc.map.to || sc.map.cam;
+    if (to.s <= whole(sc.L, sc.map.w, sc.map.h).s * 1.02) home(sc.key);
+  }
+
+  function pan(sc, dx, dy) {
+    var m = sc.map;
+    m.cam = fence({ s: m.cam.s, x: m.cam.x - dx / m.cam.s, y: m.cam.y - dy / m.cam.s }, sc.L, m.w, m.h);
+  }
+
+  function zoomTo(sc, factor, px, py, glide) {
+    var m = sc.map, from = (glide && m.mode === "free" && m.to) || m.cam, to;
+    to = zoomAt(from, factor, px, py, sc.L, m.w, m.h);
+    letGo(sc);
+    if (glide && !still) m.to = to;
+    else m.cam = to;
+  }
+
+  function ready(key) {
+    var sc = scenes.get(key);
+    return sc && sc.map.cam ? sc : null;
+  }
+
+  function zoomBy(key, factor) {
+    var sc = ready(key);
+    if (!sc) return;
+    zoomTo(sc, factor, sc.map.w / 2, sc.map.h / 2, true);
+    settle(sc);
+    tell(sc);
+    repaint(sc);
+  }
+
+  function home(key) {
+    var sc = scenes.get(key);
+    if (!sc) return;
+    letGo(sc);
+    sc.map.mode = "whole";
+    tell(sc);
+    repaint(sc);
+  }
+
+  function follow(key, id) {
+    var sc = scenes.get(key), m = sc && sc.map;
+    if (!sc || !sc.lanes.some(function (one) { return one.id === id; })) return;
+    letGo(sc);
+    m.mode = "follow";
+    m.id = id;
+    m.want = Math.max(UP_CLOSE, m.cam ? m.cam.s : 0, m.w ? 1.6 * whole(sc.L, m.w, m.h).s : 0);
+    tell(sc);
+    repaint(sc);
+  }
+
+  function view(key) {
+    var sc = scenes.get(key), m = sc && sc.map;
+    if (!sc) return null;
+    var cam = m.to || m.cam, seen = m.cam || {};
+    return {
+      mode: m.mode, id: m.id, s: seen.s, x: seen.x, y: seen.y, w: m.w, h: m.h, least: cam ? whole(sc.L, m.w, m.h).s : null,
+      want: m.want, shown: sc.shown, frames: sc.frames, pins: sc.pins.slice(),
+    };
+  }
+
+  // What a page left behind, as `view` gave it: anything else starts whole.
+  function restored(kept, lanes) {
+    var m = { mode: "whole", id: null, cam: null, to: null, want: UP_CLOSE, z: null, w: 0, h: 0, vx: 0, vy: 0 };
+    if (!kept || ![kept.s, kept.x, kept.y].every(Number.isFinite)) return m;
+    if (kept.mode === "follow" && lanes.some(function (one) { return one.id === kept.id; })) {
+      return assign(m, { mode: "follow", id: kept.id, want: Number.isFinite(kept.want) ? kept.want : UP_CLOSE });
+    }
+    return kept.mode === "free" ? assign(m, { mode: "free", cam: { s: kept.s, x: kept.x, y: kept.y } }) : m;
+  }
+
+  // ---- The fingers
+
+  // How far a finger strays and is still a tap, how near a number it has to land, and how soon a second tap is a double one.
+  var STRAY = 8, REACH = 14, DOUBLE_MS = 320;
+
+  function listen(sc) {
+    var cv = sc.canvas, fingers = new Map(), pair = null, moved = 0, trail = null, tap = null;
+    function zoomed() { return sc.map.mode !== "whole"; }
+    function fullScreen() { return !!cv.closest("dialog"); }
+    function spotOf(event) {
+      var r = cv.getBoundingClientRect();
+      // The finger's own time: how late a busy page hears of it says nothing about how fast it went.
+      return { x: event.clientX - r.left, y: event.clientY - r.top, t: event.timeStamp };
+    }
+    function two() {
+      if (fingers.size !== 2) return null;
+      var p = Array.from(fingers.values());
+      return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2, apart: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) || 1 };
+    }
+    function drop(event) {
+      if (!fingers.delete(event.pointerId)) return false;
+      pair = two();
+      trail = null;
+      cv.classList.toggle("held", fingers.size > 0);
+      return true;
+    }
+    cv.addEventListener("pointerdown", function (event) {
+      if (event.button || !sc.map.cam) return;
+      // The first of a new touch: whatever the browser never said had left is gone.
+      if (event.isPrimary) fingers.clear();
+      sc.map.vx = sc.map.vy = 0;
+      fingers.set(event.pointerId, spotOf(event));
+      moved = fingers.size > 1 ? Infinity : 0;
+      pair = two();
+      trail = null;
+      cv.classList.add("held");
+      try { cv.setPointerCapture(event.pointerId); } catch (e) { /* A finger already gone: its moves end at the canvas's edge. */ }
+    });
+    cv.addEventListener("pointermove", function (event) {
+      var was = fingers.get(event.pointerId);
+      if (!was) return;
+      var at = spotOf(event);
+      fingers.set(event.pointerId, at);
+      if (fingers.size === 2) {
+        var now = two();
+        pan(sc, now.x - pair.x, now.y - pair.y);
+        zoomTo(sc, now.apart / pair.apart, now.x, now.y, false);
+        pair = now;
+      } else if (fingers.size === 1) {
+        moved += Math.hypot(at.x - was.x, at.y - was.y);
+        if (moved <= STRAY || !zoomed()) return;
+        var dx = at.x - was.x, dy = at.y - was.y, dt = Math.max(1, at.t - was.t);
+        trail = { x: 0.7 * dx / dt + 0.3 * (trail ? trail.x : 0), y: 0.7 * dy / dt + 0.3 * (trail ? trail.y : 0), t: at.t };
+        letGo(sc);
+        pan(sc, dx, dy);
+      } else return;
+      tell(sc);
+      repaint(sc);
+    });
+    cv.addEventListener("pointerup", function (event) {
+      var last = trail;
+      if (!drop(event) || fingers.size) return;
+      if (moved <= STRAY) return touch(spotOf(event));
+      if (last && !still && event.timeStamp - last.t < 60 && Math.hypot(last.x, last.y) > 0.15) {
+        sc.map.vx = last.x;
+        sc.map.vy = last.y;
+        sc.map.glided = 0;
+        repaint(sc);
+      }
+      settle(sc);
+    });
+    ["pointercancel", "lostpointercapture"].forEach(function (name) {
+      cv.addEventListener(name, function (event) {
+        if (drop(event) && !fingers.size) settle(sc);
+      });
+    });
+    function touch(at) {
+      var best = null, near = REACH;
+      sc.pins.forEach(function (p) {
+        var far = Math.hypot(Math.max(0, Math.abs(p.x - at.x) - p.w / 2), Math.max(0, Math.abs(p.y - at.y) - p.h / 2));
+        if (far < near) { near = far; best = p; }
+      });
+      if (best) {
+        tap = null;
+        follow(sc.key, best.id);
+      } else if (tap && at.t - tap.t < DOUBLE_MS && Math.hypot(at.x - tap.x, at.y - tap.y) < 40) {
+        tap = null;
+        zoomTo(sc, 2, at.x, at.y, true);
+        tell(sc);
+        repaint(sc);
+      } else tap = at;
+    }
+    // A page behind a full screen has nothing to scroll; on the card only a pinch, which a trackpad says with ctrl, is ours.
+    cv.addEventListener("wheel", function (event) {
+      if (!sc.map.cam || !(event.ctrlKey || event.metaKey || fullScreen())) return;
+      event.preventDefault();
+      var at = spotOf(event), lines = event.deltaMode === 1 ? 16 : 1;
+      zoomTo(sc, Math.exp(-clamp(event.deltaY * lines, -200, 200) * (event.ctrlKey ? 0.006 : 0.002)), at.x, at.y, false);
+      settle(sc);
+      tell(sc);
+      repaint(sc);
+    }, { passive: false });
+    // Safari's own: on an iPhone it zooms the page from these, whatever touch-action says, and on a Mac they are all a
+    // trackpad's pinch is.
+    var grown = 1;
+    ["gesturestart", "gesturechange"].forEach(function (name) {
+      cv.addEventListener(name, function (event) {
+        event.preventDefault();
+        if (name === "gesturechange" && !fingers.size && sc.map.cam) {
+          var at = spotOf(event);
+          zoomTo(sc, event.scale / grown, at.x, at.y, false);
+          settle(sc);
+          tell(sc);
+          repaint(sc);
+        }
+        grown = event.scale || 1;
+      });
+    });
+    cv.addEventListener("touchmove", function (event) {
+      if (event.cancelable && (event.touches.length > 1 || zoomed() || fullScreen())) event.preventDefault();
+    }, { passive: false });
   }
 
   // The observer's last word can be stale where the browser renders no frames (a headless one, a page coming back from
-  // the background): a lane it calls out of sight is measured once more before being skipped.
-  function visible(one) {
-    if (inSight.get(one.canvas) !== false) return true;
-    var r = one.canvas.getBoundingClientRect();
+  // the background): a canvas it calls out of sight is measured once more before being skipped.
+  function visible(cv) {
+    if (!cv.isConnected) return false;
+    if (inSight.get(cv) !== false) return true;
+    var r = cv.getBoundingClientRect();
     return r.width > 0 && r.bottom > 0 && r.top < (window.innerHeight || 0) && r.right > 0 && r.left < (window.innerWidth || 0);
   }
 
-  // With less motion each lane is drawn once per place, size and style; the loop then only looks, twice a second.
-  function stillKey(one) { return [one.canvas.clientWidth, styleId, one.state.to, one.state.anim, one.team.length, one.tc].join(":"); }
+  // With less motion a scene is drawn once per answer, size and style; the loop then only looks, twice a second.
+  function stillKey(sc) {
+    return [styleId, sc.canvas.clientWidth, sc.canvas.clientHeight].concat(sc.lanes.map(function (one) {
+      return one.state.p.key + one.state.p.anim + (one.place ? one.place.text : "");
+    })).join();
+  }
 
+  // A frame that fails leaves the one before on the canvas: it never stops the next.
   function loop() {
     timer = null;
     if (document.hidden || level >= LEVELS) return;
-    var began = performance.now(), deadline = began + BAKE_MS;
-    var budget = { left: function () { return deadline - performance.now(); } };
-    var drew = 0;
-    lanes.forEach(function (one) {
-      if (!visible(one)) return;
-      if (still) {
-        var key = stillKey(one);
-        if (one.still !== key && draw(one, Date.now(), null) && one.complete) one.still = key;
-        return;
-      }
-      if (draw(one, Date.now(), budget)) drew++;
-    });
-    tick++;
-    if (drew) {
-      var took = performance.now() - began;
-      frames++;
-      spent.push(took);
-      samples.push(took);
-      if (samples.length > 120) samples.shift();
-      if (spent.length >= WINDOW) {
-        var next = degrade(level, mean(spent));
-        spent = [];
-        if (next !== level) {
-          level = next;
-          // Out of budget even so: the stages empty, and the stylesheet folds them away.
-          if (level >= LEVELS) lanes.forEach(function (one) { if (one.canvas.parentNode) one.canvas.parentNode.removeChild(one.canvas); });
-        }
-      }
+    try {
+      step();
+    } finally {
+      start();
     }
-    start();
   }
-  var samples = [];
+
+  // A browser that renders no frames would leave a scene waiting for its own for ever.
+  var LATE_MS = 250;
+
+  function step() {
+    var began = performance.now(), deadline = began + BAKE_MS, now = Date.now(), stride = keeps(level).stride, drew = 0;
+    var budget = { left: function () { return deadline - performance.now(); } };
+    var tick = Math.floor(now * FPS / 1000), seen = [];
+    scenes.forEach(function (sc) {
+      // A gesture has drawn this very tick, or is about to.
+      if (!visible(sc.canvas) || (sc.due && now - sc.asked < LATE_MS) || (!still && sc.tick === tick)) return;
+      if (still) {
+        var key = stillKey(sc);
+        if (sc.still === key && sc.whole) return;
+        sc.still = key;
+      }
+      seen.push(sc);
+      standAll(sc, now);
+    });
+    // Whoever has never been drawn comes before anybody's next frame.
+    seen.forEach(function (sc) { introduce(sc, budget); });
+    seen.forEach(function (sc) {
+      if (!drawTrack(sc, now, budget, stride, tick, false)) return;
+      drew++;
+      if (sc.busy) repaint(sc);
+    });
+    if (drew && !still) account(performance.now() - began);
+  }
+
+  function introduce(sc, budget) {
+    sc.lanes.forEach(function (one) {
+      if (one.on === false) return;
+      one.team.forEach(function (who, i) {
+        if (!one.last[i]) one.last[i] = athlete(one.at.anim, ANIMS[one.at.anim].still, who, one.tc, budget);
+      });
+    });
+  }
+
+  function standAll(sc, now) {
+    sc.lanes.forEach(function (one) { one.at = spot(one.state, sc.L, now); });
+  }
+
+  // A gesture's own frame, at the browser's next one instead of the twelve a second. It neither counts as slow nor bakes for
+  // long, and the loop leaves the scene to it. It asks for another only while something moves.
+  var QUICK_BAKE_MS = 3;
+
+  function repaint(sc) {
+    if (sc.due || document.hidden || level >= LEVELS || !visible(sc.canvas)) return;
+    sc.asked = Date.now();
+    sc.due = requestAnimationFrame(function () {
+      sc.due = 0;
+      if (document.hidden || level >= LEVELS || !visible(sc.canvas) || !scenes.has(sc.key)) return;
+      var began = performance.now(), now = Date.now(), gliding = glide(sc, now);
+      standAll(sc, now);
+      var budget = { left: function () { return QUICK_BAKE_MS - (performance.now() - began); } };
+      introduce(sc, budget);
+      if (!drawTrack(sc, now, budget, keeps(level).stride, Math.floor(now * FPS / 1000), true)) return;
+      gestures++;
+      costs.push(performance.now() - began);
+      if (costs.length > 600) costs.shift();
+      if (sc.busy || gliding) repaint(sc);
+    });
+  }
+
+  // The track going on after the finger left it, ever slower.
+  var GLIDE_MS = 220;
+  var costs = [];
+
+  function glide(sc, now) {
+    var m = sc.map, speed = Math.hypot(m.vx, m.vy);
+    if (!speed || m.mode !== "free" || !m.cam) return false;
+    var ms = m.glided ? Math.min(40, now - m.glided) : 16, was = m.cam;
+    m.glided = now;
+    m.vx *= Math.exp(-ms / GLIDE_MS);
+    m.vy *= Math.exp(-ms / GLIDE_MS);
+    pan(sc, m.vx * ms, m.vy * ms);
+    if (speed < 0.02 || (ms && Math.abs(was.x - m.cam.x) + Math.abs(was.y - m.cam.y) < 1e-6)) m.vx = m.vy = 0;
+    return !!(m.vx || m.vy);
+  }
+
+  function account(took) {
+    frames++;
+    spent.push(took);
+    samples.push(took);
+    if (samples.length > 240) samples.shift();
+    if (spent.length < WINDOW) return;
+    var next = degrade(level, mean(spent));
+    spent = [];
+    if (next === level) return;
+    level = next;
+    // live.js redraws the card without what no longer fits, and syncs again.
+    if (onLevel) onLevel(keeps(level));
+  }
   function mean(list) { return list.length ? list.reduce(function (a, b) { return a + b; }, 0) / list.length : 0; }
 
   function start() {
-    if (timer !== null || document.hidden || level >= LEVELS || !lanes.size) return;
-    timer = setTimeout(loop, still ? 500 : (1000 / FPS) * stride());
+    if (timer !== null || document.hidden || level >= LEVELS || !scenes.size) return;
+    var whole = true;
+    scenes.forEach(function (sc) { if (!sc.whole) whole = false; });
+    timer = setTimeout(loop, still ? (whole ? 500 : 60) : (1000 / FPS) * keeps(level).stride);
   }
 
   document.addEventListener("visibilitychange", function () {
@@ -916,46 +1680,85 @@
     } else start();
   });
 
-  // Called by live.js after every redraw with the lanes now on the card: their stages are new nodes, so each lane's
-  // canvas moves into its new stage and keeps its state, and a lane whose phase changed runs to its new piece.
-  function sync(stages, options) {
-    var chosen = options && STYLES[options.style] ? options.style : "det";
+  function canvas(sc) {
+    var cv = document.createElement("canvas");
+    cv.className = "scene";
+    if (watcher) watcher.observe(cv);
+    sc.canvas = cv;
+    if (window.ResizeObserver) {
+      sc.sizes = new ResizeObserver(function () { repaint(sc); });
+      sc.sizes.observe(cv);
+    }
+    listen(sc);
+  }
+  function drop(sc) {
+    if (watcher) watcher.unobserve(sc.canvas);
+    if (sc.sizes) sc.sizes.disconnect();
+    if (sc.due) cancelAnimationFrame(sc.due);
+    inSight.delete(sc.canvas);
+    if (sc.canvas.parentNode) sc.canvas.parentNode.removeChild(sc.canvas);
+  }
+
+  // Called by live.js after every redraw with the heats now running. Each scene keeps its canvas, its state and the visitor's
+  // view of it; a lane whose phase changed runs to its new station. A heat with no `track` to be in, as in «Tiempos», is kept
+  // and not drawn; one that is no longer on the list is forgotten.
+  function sync(heats, options) {
+    var chosen = options && STYLES[options.style] ? options.style : "det", now = Date.now(), keep = new Set();
+    if (options && options.onLevel) onLevel = options.onLevel;
+    if (options && options.onView) onView = options.onView;
     if (chosen !== styleId) {
       styleId = chosen;
-      lanes.forEach(function (one) { one.last = []; });
+      scenes.forEach(function (sc) { sc.lanes.forEach(function (one) { one.last = []; }); });
     }
-    var now = Date.now(), keep = new Set();
-    (stages || []).forEach(function (s) {
-      keep.add(s.key);
-      var one = lanes.get(s.key);
-      if (!one) {
-        var cv = document.createElement("canvas");
-        cv.className = "lane-avatars";
-        cv.style.height = STAGE_HEIGHT + "px";
-        one = { canvas: cv, state: null, last: [] };
-        lanes.set(s.key, one);
-        if (watcher) watcher.observe(cv);
+    (level < LEVELS ? heats || [] : []).forEach(function (h) {
+      keep.add(h.key);
+      var sc = scenes.get(h.key), known = new Map();
+      if (!sc) {
+        sc = { key: h.key, lanes: [], pins: [], whole: true, shown: 0, frames: 0, seen: now, due: 0, told: "wholenull" };
+        sc.map = restored(h.view, h.lanes);
+        canvas(sc);
+        scenes.set(h.key, sc);
       }
-      one.team = teamOf(s.heat, s.laneId);
-      one.tc = LANE_COLOURS.indexOf(colourOf(s.lane));
-      one.state = advance(one.state, plan(s), now);
-      if (level < LEVELS && one.canvas.parentNode !== s.stage) s.stage.appendChild(one.canvas);
+      sc.lanes.forEach(function (one) { known.set(one.id, one); });
+      sc.L = layout(h.heat, h.lanes.length);
+      sc.still = null;
+      sc.lanes = h.lanes.map(function (lane) {
+        var old = known.get(lane.id), state = advance(old ? old.state : null, place(lane, sc.L), now, sc.L);
+        var held = lane.place || null, before = old && old.place;
+        return {
+          id: lane.id, lane: lane.lane, name: lane.name, state: state, at: spot(state, sc.L, now), last: old ? old.last : [],
+          place: held, popped: !before || !held ? 0 : before.n === held.n ? old.popped : now,
+          team: teamOf(h.heat, lane.id).map(function (who, i) { return assign({ n: i % 4 }, who); }),
+          tc: LANE_COLOURS.indexOf(colourOf(lane.lane)), on: old ? old.on : undefined,
+        };
+      });
+      if (sc.map.mode === "follow" && !sc.lanes.some(function (one) { return one.id === sc.map.id; })) home(h.key);
+      if (!h.track) {
+        if (sc.canvas.parentNode) sc.canvas.parentNode.removeChild(sc.canvas);
+      } else if (sc.canvas.parentNode !== h.track) h.track.appendChild(sc.canvas);
+      tell(sc);
     });
-    lanes.forEach(function (one, key) {
+    scenes.forEach(function (sc, key) {
       if (keep.has(key)) return;
-      if (watcher) watcher.unobserve(one.canvas);
-      inSight.delete(one.canvas);
-      lanes.delete(key);
+      drop(sc);
+      scenes.delete(key);
     });
     start();
   }
 
   function stats() {
-    return { frames: frames, averageMs: mean(samples), samples: samples.slice(), level: level, bytes: cache.bytes, cached: cache.map.size, still: still };
+    return {
+      frames: frames, gestures: gestures, costs: costs.slice(), averageMs: mean(samples), samples: samples.slice(), level: level,
+      bytes: cache.bytes, cached: cache.map.size, still: still,
+    };
   }
 
   window.CatchUpAvatars = {
     sync: sync,
+    view: view,
+    zoom: zoomBy,
+    home: home,
+    follow: follow,
     stats: stats,
     STYLES: STYLE_IDS.slice(),
     MOVES: MOVES.map(function (row) { return { name: row[0], anim: row[1], approx: !!row[2] }; }),
@@ -964,12 +1767,29 @@
     movementOf: movementOf,
     teamOf: teamOf,
     colourOf: colourOf,
-    plan: plan,
+    layout: layout,
+    laneX: laneX,
+    place: place,
+    runShare: runShare,
     advance: advance,
-    at: at,
+    spot: spot,
+    formation: formation,
+    sight: sight,
+    whole: whole,
+    fence: fence,
+    zoomAt: zoomAt,
+    cuts: cuts,
+    pinned: pinned,
+    project: project,
+    tags: tags,
+    edges: edges,
+    keeps: keeps,
+    trackStride: trackStride,
+    need: need,
     degrade: degrade,
     Lru: Lru,
     verify: verify,
+    CLOSEST: CLOSEST,
     BUDGET_MS: BUDGET_MS,
     MEMORY: MEMORY,
   };

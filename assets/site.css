@@ -1377,49 +1377,183 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .heat-view { display: flex; width: fit-content; margin: 0 0 6px auto; padding: 2px; border: .5px solid var(--line); border-radius: 999px; background: var(--ink); }
 
-.lanes { margin: 0; padding: 0; list-style: none; }
+/* As wide as the card, so a followed row reads as one band. */
+.lanes { margin: 0 -14px; padding: 0; list-style: none; }
 
-.lane { padding: 10px 0; border-top: .5px solid var(--line); font-size: 14px; }
+/* The name and what the lane does share what is left by halves; one that needs less leaves the rest to the other. */
+.lane-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, max-content) 1fr minmax(0, max-content);
+  align-items: center;
+  column-gap: 5px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 14px;
+  border: 0;
+  border-top: .5px solid var(--line);
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: 500 13px/1.15 var(--body);
+  text-align: left;
+}
 
-.lane-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 10px; }
+button.lane-row { cursor: pointer; }
 
-.lane-no { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+button.lane-row:focus-visible { outline-offset: -2px; }
 
-.lane-name { font-weight: 700; min-width: 0; overflow-wrap: normal; }
+button.lane-row[aria-pressed="true"] { background: #232125; box-shadow: inset 3px 0 0 var(--heat); }
 
-.lane-count { font: 600 12px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); }
+.lane-place { min-width: 24px; margin-right: -2px; color: var(--muted); font: 900 15px/1 var(--display); font-variant-numeric: tabular-nums; }
 
-/* The lane's athletes (avatars.js); with nothing drawn in it the stage takes no room. */
-.lane-stage { height: 120px; margin: 6px 0 0; overflow: hidden; }
+.lane-place.first { color: var(--heat); }
 
-.lane-stage:empty { display: none; }
+.lane-pin {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  color: #14110f;
+  font: 900 12px/1 var(--display);
+}
 
-.lane-avatars { display: block; width: 100%; height: 120px; image-rendering: pixelated; }
+.lane-name { min-width: 0; overflow: hidden; font-weight: 700; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+
+.lane-says { display: flex; grid-column: -2; justify-content: flex-end; align-items: baseline; min-width: 0; color: var(--muted); }
+
+.lane-phase { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+.lane-count { flex: none; white-space: pre; font-variant-numeric: tabular-nums; }
+
+.lane-result { min-width: 0; color: var(--paper); font: 900 17px/1 var(--display); font-variant-numeric: tabular-nums; text-align: right; }
+
+.lane-star { color: var(--paper); font-weight: 700; }
+
+.lane-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; text-align: right; }
+
+/* Read and not seen. */
+.said { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: pre; }
+
+/* Text twice as big: what the lane does goes under its name. */
+@container (max-width: 15em) {
+  .lane-row { grid-template-columns: auto auto minmax(0, 1fr); row-gap: 2px; }
+
+  .lane-says { grid-column: 3; justify-content: flex-start; }
+
+  .lane-result { text-align: left; }
+}
+
+@container (min-width: 640px) {
+  .lanes { display: grid; grid-template: repeat(var(--half), auto) / repeat(2, minmax(0, 1fr)); grid-auto-flow: column; }
+}
+
+/* The track (avatars.js draws it, live.js puts the controls over it). It keeps its room while its script loads, so the rows do
+   not jump under a finger. */
+.heat { container-type: inline-size; }
+
+.track { margin: 0 -14px; height: clamp(300px, 46cqi, min(520px, 80svh)); background: #0b0a0a; }
+
+/* Whole, one finger scrolls the page; the pinch is always the track's, also with a finger on a control. */
+.track-view, .scene { touch-action: pan-y; }
+
+.track-view { position: relative; height: 100%; overflow: hidden; background: #0b0a0a; }
+
+.scene {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.zoomed, .zoomed .scene, .track-screen, .track-screen .track-view, .track-screen .scene { touch-action: none; }
+
+.zoomed .scene { cursor: grab; }
+
+.zoomed .scene.held { cursor: grabbing; }
+
+.track-control {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #3a373c;
+  border-radius: 12px;
+  background: rgb(21 20 23 / .86);
+  color: var(--paper);
+  font: 600 12px/1 var(--mono);
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.track-control svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.track-full { top: 8px; right: 8px; }
+
+.track-in { right: 8px; bottom: 51px; border-radius: 12px 12px 0 0; }
+
+.track-out { right: 8px; bottom: 8px; border-radius: 0 0 12px 12px; }
+
+.track-all { left: 8px; bottom: 8px; padding: 0 14px; }
+
+@media (hover: hover) {
+  .track-control:hover { border-color: var(--paper); }
+}
+
+.track-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  margin: 0;
+  padding: 8px 12px;
+  translate: -50%;
+  border-radius: 99px;
+  background: rgb(21 20 23 / .86);
+  font: 600 11px/1 var(--mono);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* The track over the whole page. */
+.track-screen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  border: 0;
+  background: #0b0a0a;
+  color: var(--paper);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.track-screen[open] { display: flex; flex-direction: column; }
+
+.track-screen .track-view { flex: 1; min-height: 0; }
+
+.track-screen-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: var(--panel); }
+
+.track-screen-head .live-clock { font-size: 28px; }
+
+html.track-open { overflow: hidden; }
 
 .avatar-style { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 2px 4px; margin: 0 0 6px; }
 
 .avatar-style-label { font: 600 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
 
 .live .avatar-style .toggle { padding: 6px 10px; }
-
-.lane-bar { display: flex; gap: 4px; margin: 8px 0 6px; }
-
-.seg { flex: 1; height: 8px; border-radius: 3px; background: var(--line); overflow: hidden; }
-
-.seg.done { background: var(--heat); }
-
-.seg.current { background: color-mix(in srgb, var(--heat) 22%, var(--line)); }
-
-/* The live server sends no progress inside a phase: the current piece shows only that it has begun. */
-.seg .fill { display: block; width: 18%; height: 100%; background: var(--heat); }
-
-.lane-foot { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
-
-.lane-phase { min-width: 0; font-weight: 500; font-size: 14px; color: var(--paper); }
-
-.lane-phase.blank { color: var(--muted); }
-
-.lane-result { font: 900 18px/1 var(--display); font-variant-numeric: tabular-nums; }
 
 /* Split times: position and name stay put while the phases scroll inside the box; the gap stays on the right. */
 .times table { min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: normal; }
@@ -1440,7 +1574,7 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .times td.pending, .times td.void-gap { color: var(--muted); }
 
-.provisional, .void {
+.provisional {
   justify-self: end;
   padding: 2px 6px;
   border: 1px solid currentColor;
@@ -1450,8 +1584,6 @@ footer .fine { display: flex; flex-wrap: wrap; gap: 10px; }
   text-transform: uppercase;
   color: var(--hyrox);
 }
-
-.void { color: var(--muted); }
 
 .next-heats { margin: 0; padding: 0; list-style: none; }
 
