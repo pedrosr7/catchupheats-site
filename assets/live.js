@@ -235,7 +235,7 @@
   }
 
   function shownKey() {
-    return JSON.stringify([latest.now, latest.next, latest.standings, view, heatView, avatarStyle, category, drawable]);
+    return JSON.stringify([latest.now, latest.next, latest.standings, view, heatView, avatarStyle, category, drawable, intervalsNow()]);
   }
 
   // Draws the latest answer with the visitor's view and category: on a new answer, and at once on a press.
@@ -327,7 +327,8 @@
 
   function heatBlock(heat) {
     var phases = heat.phases || [];
-    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases, heat.format); });
+    var iv = intervalsOf(heat);
+    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases, heat.format, iv); });
     var it = drawable && heat.status === "RUNNING" && lanes.length ? trackOf(heat) : null;
     var block = it ? it.card : el("article", "heat");
     var parts = [];
@@ -341,6 +342,8 @@
     var running = heat.status === "RUNNING" && typeof heat.startedAtMs === "number";
     var cap = typeof heat.capSeconds === "number" ? t("cap").replace("{time}", seconds(heat.capSeconds)) : null;
     if (cap) main.appendChild(el("p", "heat-cap", cap));
+    var round = intervalHeading(heat, iv);
+    if (round) main.appendChild(round);
     var clock = heatClock(heat);
     if (clock) head.appendChild(clock);
     parts.push(head);
@@ -385,13 +388,69 @@
       var list = el("ol", "lanes");
       // Two columns on a wide card, the first one filled first.
       list.style.setProperty("--half", Math.ceil(ordered.length / 2));
-      ordered.forEach(function (one) { list.appendChild(laneItem(one, phases.length, heat, it)); });
+      ordered.forEach(function (one) { list.appendChild(laneItem(one, iv ? iv.p : phases.length, heat, it)); });
       parts.push(list);
     }
     var note = heatView !== "times" || weighed(ordered) ? laneNote(ordered, heat) : null;
     if (note) parts.push(note);
     arrange(block, parts);
     return block;
+  }
+
+  // An interval WOD repeats its movements once per interval, on the heat clock: the track and the rows count one interval at
+  // a time, and its phases are those of one interval only when they divide into them.
+  function intervalsOf(heat) {
+    var of = Math.floor(+heat.intervals || 0), work = +heat.intervalSeconds || 0, phases = heat.phases || [];
+    if (of < 2 || !(work > 0) || heat.status !== "RUNNING" || typeof heat.startedAtMs !== "number") return null;
+    var p = phases.length && phases.length % of === 0 ? phases.length / of : phases.length;
+    return { of: of, work: work, rest: Math.max(0, +heat.restSeconds || 0), p: p, phases: phases.slice(0, p), started: heat.startedAtMs };
+  }
+
+  // Which interval the heat clock is in, from 0, its window of work in seconds, and whether that is over.
+  function intervalAt(iv, now) {
+    var second = (now - iv.started) / 1000, period = iv.work + iv.rest;
+    var i = Math.max(0, Math.min(iv.of - 1, Math.floor(second / period))), from = i * period, to = from + iv.work;
+    var over = second >= (iv.of - 1) * period + iv.work;
+    return { i: i, from: from, to: to, over: over, resting: !over && second >= to };
+  }
+
+  // A lane's station inside the interval under way: its splits in that window. Past the last movement, or once the work is
+  // over, it waits where it is.
+  function stationIn(iv, splits, now) {
+    var w = intervalAt(iv, now), inside = [];
+    splits.forEach(function (split) {
+      var s = split && split.second;
+      if (typeof s === "number" && s > w.from && s <= w.to) inside.push(s);
+    });
+    inside.sort(function (a, b) { return a - b; });
+    var count = inside.length;
+    return {
+      slot: Math.max(0, Math.min(count, iv.p - 1)), round: w.i, idle: (iv.p > 0 && count >= iv.p) || w.resting || w.over,
+      since: iv.started + (count ? inside[count - 1] : w.from) * 1000,
+    };
+  }
+
+  function intervalWords(iv, now) {
+    var w = intervalAt(iv, now), words = t("interval").replace("{n}", w.i + 1).replace("{of}", iv.of);
+    return w.resting ? words + " · " + t("rest") : words;
+  }
+
+  function intervalHeading(heat, iv) {
+    if (!iv) return null;
+    var line = el("p", "heat-interval", intervalWords(iv, Date.now() + offset));
+    ["of", "work", "rest", "started"].forEach(function (key) { line.setAttribute("data-" + key, iv[key]); });
+    return line;
+  }
+
+  // Where the clock is in each running interval heat: crossing into another interval or its rest redraws the rows.
+  function intervalsNow() {
+    var now = Date.now() + offset;
+    return latest.now.map(function (heat) {
+      var iv = intervalsOf(heat);
+      if (!iv) return null;
+      var w = intervalAt(iv, now);
+      return [w.i, w.resting, w.over];
+    });
   }
 
   function heatClock(heat) {
@@ -408,7 +467,7 @@
   // the one it gives in a max load to who has not lifted.
   function givePlaces(ordered) {
     var standing = ordered.filter(function (one) {
-      return !one.voided && typeof one.rank === "number" && (!one.weighed || one.score !== null);
+      return !one.voided && typeof one.rank === "number" && (!(one.weighed || one.counted) || one.score !== null);
     });
     var level = standing.every(function (one) { return one.rank === standing[0].rank && !one.marks && one.score === null; });
     standing.forEach(function (one) {
@@ -430,6 +489,7 @@
         return {
           id: one.lane.laneId, lane: one.number, name: one.lane.entryName, done: one.marks, closed: one.closed,
           finished: !!(one.result && one.result.finished), voided: one.voided, since: began(one, heat), place: one.place,
+          at: one.station,
         };
       }),
     });
@@ -515,6 +575,8 @@
     screen.setAttribute("aria-label", it.name);
     var head = el("div", "track-screen-head");
     head.appendChild(el("span", "heat-name", it.name));
+    var round = intervalHeading(it.heat, intervalsOf(it.heat));
+    if (round) head.appendChild(round);
     var clock = heatClock(it.heat);
     if (clock) head.appendChild(clock);
     screen.appendChild(head);
@@ -590,7 +652,7 @@
   }
 
   // What both views read off a lane. The live server sends no progress inside a phase, so the current one is only named.
-  function laneState(lane, phases, format) {
+  function laneState(lane, phases, format, iv) {
     var total = phases.length;
     var voided = lane.review === "VOID";
     var result = lane.result || null;
@@ -604,6 +666,9 @@
     var at = {};
     splits.forEach(function (split) { if (split && typeof split.second === "number") at[split.phase] = split.second; });
     var splitAt = phases.map(function (phase) { return typeof at[phase] === "number" ? at[phase] : null; });
+    // A server older than the count sends no key; with none yet there is no place to give either.
+    var counted = !!iv && "repsSoFar" in lane;
+    var reps = counted && !result && typeof lane.repsSoFar === "number" && lane.repsSoFar > 0 ? lane.repsSoFar : null;
     return {
       lane: lane,
       rank: lane.rank,
@@ -613,7 +678,15 @@
       closed: closed,
       result: result,
       weighed: lifts,
-      score: scoreOf(lane, result, lifts),
+      counted: counted,
+      score: reps === null ? scoreOf(lane, result, lifts) : t("reps").replace("{n}", reps.toLocaleString(lang, { useGrouping: false })),
+      // On this device's clock, which the track keeps: the heat clock's interval is read again on every frame.
+      station: iv ? function (now) {
+        var at = stationIn(iv, splits, now + offset);
+        at.since -= offset;
+        return at;
+      } : null,
+      interval: iv,
       done: done,
       blank: !closed && done === 0 && !splits.length,
       current: !closed && done < total ? done : -1,
@@ -684,6 +757,10 @@
     } else if (one.score !== null) {
       says.appendChild(el("span", "lane-result", one.score));
       star(says, one);
+    } else if (one.interval && one.interval.p) {
+      var at = stationIn(one.interval, one.lane.splits || [], Date.now() + offset);
+      says.appendChild(el("span", "lane-phase", one.interval.phases[at.slot]));
+      says.appendChild(el("span", "lane-count", " · " + (at.slot + 1) + "/" + one.interval.p));
     } else if (one.weighed) {
       says.appendChild(el("span", "lane-phase", t("nolifts")));
     } else if (one.blank && !opening(one, total, heat)) {
@@ -965,7 +1042,14 @@
 
   // The heat's time on the server's clock: this device's clock may be minutes off, the offset from the last answer is not.
   function tickClocks() {
+    if (latest && shown && shownKey() !== drawn) return paint();
     var now = Date.now() + offset;
+    [].forEach.call(panel.querySelectorAll(".heat-interval"), function (line) {
+      var iv = {};
+      ["of", "work", "rest", "started"].forEach(function (key) { iv[key] = +line.getAttribute("data-" + key); });
+      var words = intervalWords(iv, now);
+      if (line.textContent !== words) line.textContent = words;
+    });
     [].forEach.call(panel.querySelectorAll(".live-clock"), function (clock) {
       var elapsed = Math.max(0, Math.floor((now - +clock.getAttribute("data-started")) / 1000));
       var cap = clock.getAttribute("data-cap");

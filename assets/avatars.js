@@ -151,7 +151,11 @@
 
   // A lone athlete needs less floor than a team of six, and past four lanes a phone needs narrower ones.
   function layout(heat, lanes) {
-    var phases = (heat && heat.phases) || [], size = teamOf(heat, 0).length, n = Math.max(1, phases.length), tight = lanes > 4;
+    var phases = (heat && heat.phases) || [], of = Math.floor(+(heat && heat.intervals) || 0);
+    // An interval WOD lists its movements once per interval: one interval's are the stations, and nobody laps.
+    var intervals = of > 1 && +(heat && heat.intervalSeconds) > 0;
+    if (intervals && phases.length % of === 0) phases = phases.slice(0, phases.length / of);
+    var size = teamOf(heat, 0).length, n = Math.max(1, phases.length), tight = lanes > 4;
     var lane = size === 1 ? (tight ? 40 : 46) : size === 2 && !tight ? 66 : tight ? 60 : 80;
     var len = n <= 5 ? LEN : Math.max(size > 4 ? LEN : size > 2 ? 64 : 52, Math.round(LEN * 5 / n));
     var texts = phases.length ? phases : [heat && heat.wodName];
@@ -160,7 +164,7 @@
       n: n, size: size, lanes: lanes, tight: tight, lane: lane, len: len, start: START, arch: START + n * len, wait: START - 30,
       done: START + n * len + 30, end: START + n * len + 62,
       // The live server counts an AMRAP's phases on and on, round after round, and any other WOD's that has no finish line.
-      laps: format !== "FOR_TIME",
+      laps: format !== "FOR_TIME" && !intervals,
       names: moves.map(function (m, i) { return String(m.movement || texts[i] || "").toUpperCase(); }),
       anims: moves.map(function (m) { return m.anim; }),
       props: moves.map(function (m) { return ANIMS[m.anim].prop || ""; }),
@@ -171,12 +175,19 @@
 
   // Where a lane is: a station, or L.n past the arch; `lap` the round of it under way. Only a running heat has a track and the
   // server marks a phase when it ends, so no marks means the first is under way.
-  function place(lane, L) {
+  // An interval lane says it itself, from the heat clock: the interval under way and its station in it.
+  function place(lane, L, now) {
+    if (lane.at) {
+      var at = lane.at(now === undefined ? Date.now() : now), waits = at.idle || lane.closed || lane.voided;
+      return {
+        slot: at.slot, lap: 0, round: at.round, anim: waits ? "idle" : L.anims[at.slot], since: at.since, key: at.round * (L.n + 1) + at.slot,
+      };
+    }
     var marks = Math.max(0, Math.floor(+lane.done || 0)), lap = L.laps ? Math.floor(marks / L.n) : 0;
     var slot = L.laps ? marks % L.n : Math.min(marks, lane.closed ? L.n : L.n - 1);
     if (lane.closed && lane.finished && !lane.voided) slot = L.n;
     var working = slot < L.n && !lane.closed && !lane.voided;
-    return { slot: slot, lap: lap, anim: working ? L.anims[slot] : "idle", since: lane.since, key: lap * (L.n + 1) + slot };
+    return { slot: slot, lap: lap, round: 0, anim: working ? L.anims[slot] : "idle", since: lane.since, key: lap * (L.n + 1) + slot };
   }
 
   // An estimate: the live server sends nothing inside a phase. Half the stretch in 25 s, ever slower, and never the end.
@@ -192,8 +203,14 @@
 
   // A closed phase sends the team running on; an undone mark is no run, and a lane seen for the first time is already there.
   function advance(prev, next, now, L) {
+    if (prev && next.round > prev.p.round) {
+      // A new interval: back to its first station, facing it.
+      var from = spot(prev, L, now).z, to = rest(next, L, now, now);
+      if (Math.abs(to - from) < 1) return { p: next, from: to, t0: now, t1: now, lap: false };
+      return { p: next, from: from, t0: now, t1: now + clamp(Math.abs(to - from) * 17, 900, 2600), lap: false, back: true };
+    }
     if (!prev || next.key < prev.p.key) return { p: next, from: 0, t0: now, t1: now, lap: false };
-    if (next.key === prev.p.key) return { p: next, from: prev.from, t0: prev.t0, t1: prev.t1, lap: prev.lap };
+    if (next.key === prev.p.key) return { p: next, from: prev.from, t0: prev.t0, t1: prev.t1, lap: prev.lap, back: prev.back };
     var z = spot(prev, L, now).z, lap = next.lap > prev.p.lap && next.slot < L.n;
     var to = rest(next, L, now, now), way = lap ? L.done - z + to - L.wait : to - z;
     return { p: next, from: z, t0: now, t1: now + clamp(Math.abs(way) * 17, 900, 2600), lap: lap };
@@ -208,7 +225,7 @@
       var out = L.done - state.from, gone = eased * (out + to - L.wait);
       z = gone < out ? state.from + gone : L.wait + gone - out;
     }
-    return { z: z, anim: "run", moving: true };
+    return { z: z, anim: "run", moving: true, back: !!state.back };
   }
 
   // Who stands where around the station's middle, [across, along]: the animation's rows, two abreast where lanes are narrow.
@@ -612,7 +629,13 @@
 
   var NX = 80, NY = 64, NZ = 80, C = 40, SX = NY * NZ, SY = NZ;
   var V = new Uint8Array(NX * NY * NZ), list = new Int32Array(1 << 16), ln = 0;
+  // Turned half round about the athlete's own vertical axis, for a bake that faces back down the lane.
+  var turned = false;
   function put(x, y, z, c) {
+    if (turned) {
+      x = 2 * C - 1 - x;
+      z = 2 * C - 1 - z;
+    }
     if (x < 0 || y < 0 || z < 0 || x >= NX || y >= NY || z >= NZ || ln >= list.length) return;
     var i = x * SX + y * SY + z;
     if (!V[i]) list[ln++] = i;
@@ -1009,10 +1032,15 @@
     return made;
   }
 
-  function athlete(mvId, at, v, tc, budget) {
-    return baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc].join(":"), budget, function () {
+  function athlete(mvId, at, v, tc, budget, back) {
+    return baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc, back ? "b" : ""].join(":"), budget, function () {
       var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
-      raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
+      turned = !!back;
+      try {
+        raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
+      } finally {
+        turned = false;
+      }
     });
   }
 
@@ -1112,7 +1140,7 @@
     one.team.forEach(function (who, i) {
       var f = still ? mv.still : (tick + i * (mv.N >> 2)) % mv.N;
       if (!still) f -= f % stride;
-      var e = athlete(one.at.anim, f, who, one.tc, budget);
+      var e = athlete(one.at.anim, f, who, one.tc, budget, one.at.back);
       if (e) one.last[i] = e;
       else whole = false;
       add3(list, one.last[i], x + spots[i][0], one.at.z + spots[i][1], 0);
@@ -1579,6 +1607,7 @@
       // A gesture has drawn this very tick, or is about to.
       if (!visible(sc.canvas) || (sc.due && now - sc.asked < LATE_MS) || (!still && sc.tick === tick)) return;
       if (still) {
+        retime(sc, now);
         var key = stillKey(sc);
         if (sc.still === key && sc.whole) return;
         sc.still = key;
@@ -1606,7 +1635,17 @@
   }
 
   function standAll(sc, now) {
+    retime(sc, now);
     sc.lanes.forEach(function (one) { one.at = spot(one.state, sc.L, now); });
+  }
+
+  // An interval ends on the clock, not on an answer: each frame asks the lanes that know where they are.
+  function retime(sc, now) {
+    sc.lanes.forEach(function (one) {
+      if (!one.src.at) return;
+      var next = place(one.src, sc.L, now);
+      if (next.key !== one.state.p.key || next.anim !== one.state.p.anim) one.state = advance(one.state, next, now, sc.L);
+    });
   }
 
   // A gesture's own frame, at the browser's next one instead of the twelve a second. It neither counts as slow nor bakes for
@@ -1719,10 +1758,10 @@
       sc.L = layout(h.heat, h.lanes.length);
       sc.still = null;
       sc.lanes = h.lanes.map(function (lane) {
-        var old = known.get(lane.id), state = advance(old ? old.state : null, place(lane, sc.L), now, sc.L);
+        var old = known.get(lane.id), state = advance(old ? old.state : null, place(lane, sc.L, now), now, sc.L);
         var held = lane.place || null, before = old && old.place;
         return {
-          id: lane.id, lane: lane.lane, name: lane.name, state: state, at: spot(state, sc.L, now), last: old ? old.last : [],
+          id: lane.id, lane: lane.lane, name: lane.name, src: lane, state: state, at: spot(state, sc.L, now), last: old ? old.last : [],
           place: held, popped: !before || !held ? 0 : before.n === held.n ? old.popped : now,
           team: teamOf(h.heat, lane.id).map(function (who, i) { return assign({ n: i % 4 }, who); }),
           tc: LANE_COLOURS.indexOf(colourOf(lane.lane)), on: old ? old.on : undefined,
@@ -1749,9 +1788,21 @@
     };
   }
 
+  // Where each team of a heat stands now, as the track draws it.
+  function standing(key) {
+    var sc = scenes.get(key);
+    if (!sc) return [];
+    var now = Date.now();
+    standAll(sc, now);
+    return sc.lanes.map(function (one) {
+      return { lane: one.lane, slot: one.state.p.slot, round: one.state.p.round, anim: one.at.anim, moving: one.at.moving, back: !!one.at.back };
+    });
+  }
+
   window.CatchUpAvatars = {
     sync: sync,
     view: view,
+    standing: standing,
     zoom: zoomBy,
     home: home,
     follow: follow,
