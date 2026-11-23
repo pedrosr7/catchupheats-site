@@ -327,7 +327,7 @@
 
   function heatBlock(heat) {
     var phases = heat.phases || [];
-    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases); });
+    var lanes = (heat.lanes || []).map(function (lane) { return laneState(lane, phases, heat.format); });
     var it = drawable && heat.status === "RUNNING" && lanes.length ? trackOf(heat) : null;
     var block = it ? it.card : el("article", "heat");
     var parts = [];
@@ -379,7 +379,7 @@
     givePlaces(ordered);
     if (it) sceneOf(it, heat, ordered);
     if (heatView === "times") {
-      parts.push(times(heat, phases, lanes));
+      parts.push(times(heat, phases, lanes, ordered));
     } else {
       if (it) parts.push(it.slot);
       var list = el("ol", "lanes");
@@ -387,9 +387,9 @@
       list.style.setProperty("--half", Math.ceil(ordered.length / 2));
       ordered.forEach(function (one) { list.appendChild(laneItem(one, phases.length, heat, it)); });
       parts.push(list);
-      var note = laneNote(ordered, heat);
-      if (note) parts.push(note);
     }
+    var note = heatView !== "times" || weighed(ordered) ? laneNote(ordered, heat) : null;
+    if (note) parts.push(note);
     arrange(block, parts);
     return block;
   }
@@ -404,10 +404,13 @@
     return clock;
   }
 
-  // The place the rows' order gives each lane. The server ranks everyone 1 before the first mark: that is no place yet.
+  // The place the rows' order gives each lane. The server ranks everyone 1 before the first mark: that is no place yet, nor is
+  // the one it gives in a max load to who has not lifted.
   function givePlaces(ordered) {
-    var standing = ordered.filter(function (one) { return !one.voided && typeof one.rank === "number"; });
-    var level = standing.every(function (one) { return one.rank === standing[0].rank && !one.marks && !one.result; });
+    var standing = ordered.filter(function (one) {
+      return !one.voided && typeof one.rank === "number" && (!one.weighed || one.score !== null);
+    });
+    var level = standing.every(function (one) { return one.rank === standing[0].rank && !one.marks && one.score === null; });
     standing.forEach(function (one) {
       if (!level) one.place = { n: one.rank, text: ordinal(one.rank) };
     });
@@ -587,7 +590,7 @@
   }
 
   // What both views read off a lane. The live server sends no progress inside a phase, so the current one is only named.
-  function laneState(lane, phases) {
+  function laneState(lane, phases, format) {
     var total = phases.length;
     var voided = lane.review === "VOID";
     var result = lane.result || null;
@@ -596,6 +599,8 @@
     if (result && result.finished) done = total;
     // The live server drops a voided lane's result, so VOID is read on its own.
     var closed = voided || !!result || !!lane.closed;
+    // A server older than the lifts sends neither key.
+    var lifts = format === "MAX_LOAD" && ("bestGrams" in lane || "attempts" in lane);
     var at = {};
     splits.forEach(function (split) { if (split && typeof split.second === "number") at[split.phase] = split.second; });
     var splitAt = phases.map(function (phase) { return typeof at[phase] === "number" ? at[phase] : null; });
@@ -607,12 +612,36 @@
       voided: voided,
       closed: closed,
       result: result,
+      weighed: lifts,
+      score: scoreOf(lane, result, lifts),
       done: done,
       blank: !closed && done === 0 && !splits.length,
       current: !closed && done < total ? done : -1,
       times: splitAt,
       reached: done ? splitAt[done - 1] : null,
     };
+  }
+
+  // The result as it is shown, or in a max load the best weight so far; null while there is neither.
+  function scoreOf(lane, result, lifts) {
+    if (result) {
+      var display = result.display || "";
+      if (!lifts) return display;
+      return typeof result.grams === "number" ? kilos(result.grams) : weightText(display);
+    }
+    return lifts && lane.attempts !== 0 && typeof lane.bestGrams === "number" ? kilos(lane.bestGrams) : null;
+  }
+
+  function weighed(lanes) { return lanes.some(function (one) { return one.weighed; }); }
+
+  function kilos(grams) {
+    var number = (grams / 1000).toLocaleString(lang, { useGrouping: false, maximumFractionDigits: 3 });
+    return t("kilos").replace("{n}", number);
+  }
+
+  // A weight as the server writes it, «102.5 kg», in the page's language; any other words as they came.
+  function weightText(display) {
+    return /^\d+(\.\d+)? kg$/.test(display) ? kilos(parseFloat(display) * 1000) : display;
   }
 
   // A row: the lane's place, its pin, its name and what it is doing. With a track to see it on, it is the button that
@@ -652,14 +681,11 @@
     var says = el("span", "lane-says");
     if (one.voided) {
       says.appendChild(el("span", "void", t("void")));
-    } else if (one.result) {
-      says.appendChild(el("span", "lane-result", one.result.display));
-      if (provisional(one)) {
-        var star = el("span", "lane-star", "*");
-        star.setAttribute("aria-hidden", "true");
-        says.appendChild(star);
-        says.appendChild(el("span", "said", " " + t("provisional")));
-      }
+    } else if (one.score !== null) {
+      says.appendChild(el("span", "lane-result", one.score));
+      star(says, one);
+    } else if (one.weighed) {
+      says.appendChild(el("span", "lane-phase", t("nolifts")));
     } else if (one.blank && !opening(one, total, heat)) {
       says.appendChild(el("span", "lane-phase", t("nomarks")));
     } else {
@@ -675,6 +701,14 @@
     return says;
   }
 
+  function star(parent, one) {
+    if (!provisional(one)) return;
+    var mark = el("span", "lane-star", "*");
+    mark.setAttribute("aria-hidden", "true");
+    parent.appendChild(mark);
+    parent.appendChild(el("span", "said", " " + t("provisional")));
+  }
+
   // With no marks, the first phase of a running heat is under way: the server marks a phase when it ends. Of a max-reps or
   // max-load WOD it sends none until the score, so there a phase and its count would tell nothing.
   function opening(one, total, heat) {
@@ -682,7 +716,7 @@
   }
 
   // As the live server counts it: whatever is not validated, a review state this script does not know included.
-  function provisional(one) { return !!one.result && !one.voided && one.lane.review !== "VALIDATED"; }
+  function provisional(one) { return one.score !== null && !one.voided && one.lane.review !== "VALIDATED"; }
 
   // What the asterisk is, once for the whole list: every result with one is a time, or they are results.
   function laneNote(lanes, heat) {
@@ -703,7 +737,10 @@
     });
   }
 
-  function times(heat, phases, lanes) {
+  // Of a max load, which has no phases to time, the weights in the order of the list.
+  function times(heat, phases, lanes, ranked) {
+    var loads = weighed(lanes);
+    var columns = loads ? [t("weight")] : phases.concat([t("gap")]);
     var box = el("div", "times");
     var wrap = el("div", "table-wrap");
     wrap.setAttribute("tabindex", "0");
@@ -712,30 +749,34 @@
     wrap.setAttribute("aria-label", heat.wodName + " · " + heat.categoryName);
     var grid = el("table");
     var head = el("tr");
-    [t("place"), t("athlete")].concat(phases, [t("gap")]).forEach(function (name, i, all) {
+    [t("place"), t("athlete")].concat(columns).forEach(function (name, i, all) {
       var th = el("th", i === 0 ? "place-head" : i === 1 ? "who" : i === all.length - 1 ? "gap" : null, name);
       th.setAttribute("scope", "col");
       head.appendChild(th);
     });
     grid.appendChild(el("thead")).appendChild(head);
     var rows = el("tbody");
-    var ordered = byProgress(lanes);
+    var ordered = loads ? ranked : byProgress(lanes);
     var first = ordered[0] && !ordered[0].voided && ordered[0].reached !== null ? ordered[0] : null;
     ordered.forEach(function (one, n) {
       var tr = el("tr");
       var cell = el("td", "place-cell");
-      cell.appendChild(el("span", "place" + (!one.voided && n === 0 && one.done ? " lead" : ""), one.voided ? "–" : String(n + 1)));
+      var at = loads ? one.place && one.place.n : one.voided ? null : n + 1;
+      cell.appendChild(el("span", "place" + (at === 1 && (loads || one.done) ? " lead" : ""), at ? String(at) : "–"));
       tr.appendChild(cell);
       var name = el("th", "who");
       name.setAttribute("scope", "row");
       name.appendChild(el("span", "entry", one.lane.entryName));
       tr.appendChild(name);
-      phases.forEach(function (phase, i) {
+      if (!loads) phases.forEach(function (phase, i) {
         if (i < one.done) tr.appendChild(el("td", "split", one.times[i] === null ? "–" : seconds(one.times[i])));
         else if (i === one.current) tr.appendChild(el("td", "split now", "…"));
         else tr.appendChild(el("td", "split pending", "·"));
       });
-      tr.appendChild(el("td", "gap" + (one.voided ? " void-gap" : ""), one.voided ? t("void") : gap(one, first)));
+      var last = loads ? one.score === null ? t("nolifts") : one.score : gap(one, first);
+      var end = el("td", "gap" + (one.voided || (loads && one.score === null) ? " void-gap" : ""), one.voided ? t("void") : last);
+      if (loads) star(end, one);
+      tr.appendChild(end);
       rows.appendChild(tr);
     });
     grid.appendChild(rows);
@@ -825,7 +866,7 @@
   }
 
   function scoreText(score) {
-    return score ? score.display + " (" + score.points + ")" + (score.provisional ? " *" : "") : "–";
+    return score ? weightText(score.display) + " (" + score.points + ")" + (score.provisional ? " *" : "") : "–";
   }
 
   function list(category, blank) {
