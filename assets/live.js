@@ -666,8 +666,9 @@
     var at = {};
     splits.forEach(function (split) { if (split && typeof split.second === "number") at[split.phase] = split.second; });
     var splitAt = phases.map(function (phase) { return typeof at[phase] === "number" ? at[phase] : null; });
-    // A server older than the count sends no key; with none yet there is no place to give either.
-    var counted = !!iv && "repsSoFar" in lane;
+    // A server older than the count sends no key; with none yet there is no place to give either. Every max-reps WOD has it,
+    // with intervals or without.
+    var counted = (!!iv || format === "MAX_REPS") && "repsSoFar" in lane;
     var reps = counted && !result && typeof lane.repsSoFar === "number" && lane.repsSoFar > 0 ? lane.repsSoFar : null;
     return {
       lane: lane,
