@@ -136,6 +136,22 @@
     return team;
   }
 
+  // ---- How a team works a phase: CatchUp Live's phaseTeams, a list beside `phases`. Anything else, or nothing, is FREE
+
+  var WORKS = { FREE: 1, ALL: 1, SYNCHRO: 1, TURNS: 1, SPLIT: 1 }, FREE_WORK = { work: "FREE", parts: [] };
+
+  // SPLIT hands the parts out in order, `athletes` each; a part that holds draws the hold of its movement.
+  function workOf(t) {
+    var work = t && typeof t.work === "string" && Object.prototype.hasOwnProperty.call(WORKS, t.work) ? t.work : "FREE", parts = [];
+    if (work !== "SPLIT") return work === "FREE" ? FREE_WORK : { work: work, parts: parts };
+    (Array.isArray(t.parts) ? t.parts : []).forEach(function (part) {
+      if (!part || typeof part !== "object") return;
+      var anim = movementOf(String(part.name || "")).anim, n = Math.max(1, Math.min(MOST_ATHLETES, Math.floor(+part.athletes || 1)));
+      for (var i = 0; i < n; i++) parts.push(part.holds === true ? holdOf(anim) : anim);
+    });
+    return parts.length ? { work: work, parts: parts } : FREE_WORK;
+  }
+
   // ---- Lane colours: at least 8 told apart on the dark card; the lane's number text stays beside them
 
   var LANE_COLOURS = ["#FF4A1C", "#1FB5A8", "#8A5CF5", "#F2EFE6", "#F2C230", "#3D8BFD", "#F05A9A", "#9BD13B"];
@@ -161,6 +177,7 @@
     var len = n <= 5 ? LEN : Math.max(size > 4 ? LEN : size > 2 ? 64 : 52, Math.round(LEN * 5 / n));
     var texts = phases.length ? phases : [heat && heat.wodName];
     var moves = texts.map(movementOf), format = (heat && heat.format) || "FOR_TIME";
+    var teams = phases.length && Array.isArray(heat.phaseTeams) ? heat.phaseTeams : [];
     return {
       n: n, size: size, lanes: lanes, tight: tight, lane: lane, len: len, start: START, arch: START + n * len, wait: START - 30,
       done: START + n * len + 30, end: START + n * len + 62,
@@ -169,6 +186,7 @@
       names: moves.map(function (m, i) { return String(m.movement || texts[i] || "").toUpperCase(); }),
       anims: moves.map(function (m) { return m.anim; }),
       props: moves.map(function (m) { return ANIMS[m.anim].prop || ""; }),
+      works: texts.map(function (_, i) { return workOf(teams[i]); }),
     };
   }
 
@@ -241,6 +259,62 @@
     return spots;
   }
 
+  // Who does what at a station, in which frame and where: [across, along] around its middle as in formation(). Only a team at
+  // work on its station works the way its phase says; running between stations or done, it is a team on its own.
+  function crew(L, slot, at, tick, still) {
+    var w = slot < L.n && !at.moving && at.anim === L.anims[slot] && L.size > 1 ? L.works[slot] : FREE_WORK;
+    var mv = ANIMS[at.anim], people = [], i;
+    function frame(m, k) { return still ? m.still : (tick + k * (m.N >> 2)) % m.N; }
+    if (w.work === "TURNS") {
+      // The one whose turn it is works in the middle; the rest wait at the side, each in a place of their own.
+      var turn = still ? 0 : Math.floor(tick / mv.N) % L.size, aside = beside(L, L.size, L.tight ? 20 : 26, 16);
+      for (i = 0; i < L.size; i++) {
+        people.push(i === turn ? { anim: at.anim, f: frame(mv, 0), x: 0, z: 0 } : { anim: "rest", f: frame(ANIMS.rest, i), x: aside[i][0], z: aside[i][1] });
+      }
+      return { sync: false, ring: null, people: people };
+    }
+    if (w.work === "SPLIT") {
+      // A bar, a rig or a bench is wider than a teammate's spacing: those stand in a file in the middle, the rest beside it.
+      var mine = [], file = [], side = [], deep = 16;
+      for (i = 0; i < L.size; i++) {
+        mine.push(w.parts[i] || "rest");
+        (ANIMS[mine[i]].form[0] === 1 ? file : side).push(i);
+      }
+      side.forEach(function (k) { deep = Math.max(deep, Math.min(34, ANIMS[mine[k]].form[2])); });
+      var places = [];
+      file.forEach(function (k, n) { places[k] = [0, ((file.length - 1) / 2 - n) * COLUMN[2]]; });
+      var by = file.length ? beside(L, side.length, L.tight ? 20 : 24, deep) : grid(side.length, 2, 28, deep);
+      side.forEach(function (k, n) { places[k] = by[n]; });
+      for (i = 0; i < L.size; i++) people.push({ anim: mine[i], f: frame(ANIMS[mine[i]], i), x: places[i][0], z: places[i][1] });
+      return { sync: false, ring: null, people: people };
+    }
+    var spots = formation(at.anim, L), sync = w.work === "SYNCHRO";
+    for (i = 0; i < L.size; i++) people.push({ anim: at.anim, f: frame(mv, sync ? 0 : i), x: spots[i][0], z: spots[i][1] });
+    return { sync: sync, ring: sync ? ringOf(people, L) : null, people: people };
+  }
+
+  // `count` places in two files, one each side of the middle, `x` out.
+  function beside(L, count, x, deep) {
+    var rows = Math.ceil(count / 2), spots = [];
+    for (var i = 0; i < count; i++) spots.push([(i % 2 ? 1 : -1) * x, ((rows - 1) / 2 - Math.floor(i / 2)) * deep]);
+    return spots;
+  }
+  function grid(count, abreast, pitch, deep) {
+    var rows = Math.ceil(count / abreast), spots = [];
+    for (var i = 0; i < count; i++) {
+      var row = Math.floor(i / abreast), here = Math.min(abreast, count - row * abreast);
+      spots.push([((i % abreast) - (here - 1) / 2) * pitch, ((rows - 1) / 2 - row) * deep]);
+    }
+    return spots;
+  }
+
+  // The ring a synchronised team stands on, in floor voxels around its middle; never over the lane's lines.
+  function ringOf(people, L) {
+    var across = 0, along = 0;
+    people.forEach(function (p) { across = Math.max(across, Math.abs(p.x) + 9); along = Math.max(along, Math.abs(p.z) + 12); });
+    return { across: Math.min(across, L.lane / 2 - 4), along: Math.min(along, L.len / 2 - 3) };
+  }
+
   // ---- The camera: the athletes' own, mirrored as they are, so +z runs right and down
 
   function flat(x, y, z) { return [2 * (z - x), x + z - 2 * y]; }
@@ -300,12 +374,13 @@
     if (roomy) most *= 1.6;
     var tall = 16, set = [];
     list.forEach(function (one) {
-      var number = String(one.lane), name = String(one.name || "").toUpperCase(), text = number;
+      var number = String(one.lane), name = String(one.name || "").toUpperCase(), mode = one.mode ? " · " + one.mode : "";
+      var text = number + mode;
       if (most) {
-        text = number + " " + name;
+        text = number + " " + name + mode;
         while (name.length > 1 && measure(text) + 10 > most) {
           name = name.slice(0, -1);
-          text = number + " " + name.replace(/\s+$/, "") + "…";
+          text = number + " " + name.replace(/\s+$/, "") + "…" + mode;
         }
       }
       var beside = one.place ? Math.ceil(measure(one.place)) + 10 : 0;
@@ -1309,6 +1384,35 @@
   floorMove("sledpush", sledPush, 16, 4, { gear: sled, form: [2, 26, 34, 0] });
   floorMove("sledpull", sledPull, 16, 4, { gear: sledRope, form: [2, 26, 34, 0] });
 
+  // ---- Holding a part while teammates work, and waiting a turn: still poses with a slow breath, each with its equipment
+
+  var SANDBAG_HOLD = moves([[0, bagAt({ py: 14.4, pz: 0, l: 0.08, hp: 0, f: [3.2, 2, 0, 0] })], [8, bagAt({ py: 14.1, l: 0.1 })], [16, bagAt({ py: 14.4, l: 0.08 })]], 16);
+  load("sandbaghold", SANDBAG_HOLD, 16, 0, "sandbag");
+  var BAR_HOLD = moves([[0, OHS_TOP], [8, overhead({ py: 14.3, l: 0.05 }, 6.6, 9.8, 0.6)], [16, overhead({ py: 14.6, l: 0.03 }, 6.6, 9.8, 0.6)]], 16);
+  lift("barhold", BAR_HOLD, 16, 0);
+  // A dead hang and a handstand are held still: the first frame of the pull-up and of the handstand push-up.
+  var HANG_AT = spline(PULL, 28), HS_AT = facing(HSPU);
+  gym("hang", function () { return HANG_AT(0); }, 16, 0, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("hshold", function () { return HS_AT(0); }, 16, 0, { gear: wall(4.6, 5.8) });
+  var WALL_SIT_P = { py: 8.6, pz: -5, l: -0.04, hp: 0, f: [3.2, 2, 1.4, 0], h: [4.4, 9.8, -1.6], ap: [0.6, -0.6, -0.4] };
+  floorMove("wallsit", moves([[0, WALL_SIT_P], [8, { py: 8.4, h: [4.4, 9.6, -1.6] }], [16, WALL_SIT_P]], 16), 16, 0, { gear: wall(-10, -8.6), form: [2, 24, 30, 0] });
+  var REST_HIPS = moves([[0, hipsAt({ py: 14.6, pz: 0, l: 0.04, hp: 0.1, f: [3.2, 2, 0, 0] })], [8, hipsAt({ py: 14.3, l: 0.08, hp: 0 })], [16, hipsAt({ py: 14.6, l: 0.04, hp: 0.1 })]], 16);
+  floorMove("rest", REST_HIPS, 16, 0, { form: [2, 24, 16, 0] });
+
+  // What a part that holds draws: the hold that keeps its movement's equipment in the hands, on the rig or on the wall.
+  var HOLD_OF = {
+    sandbag: "sandbaghold", hspu: "hshold", hswalk: "hshold", wallwalk: "hshold", squat: "wallsit", wallball: "wallsit",
+    pistol: "wallsit", lunge: "wallsit", walklunge: "wallsit", plank: "plank", hollow: "hollow", rope: "hang", legless: "hang",
+    pegboard: "hang",
+  };
+  function holdOf(anim) {
+    var mv = ANIMS[anim];
+    if (HOLD_OF[anim]) return HOLD_OF[anim];
+    if (mv && mv.bar) return "barhold";
+    if (mv && (mv.rig || mv.hang)) return "hang";
+    return "plank";
+  }
+
   // ---- Bodies and the three styles
 
   var BASE = { th: 6.5, sh: 6.5, ua: 5.5, fa: 5, tor: 9, hw: 2.2, sw: 4.4, sd: 1.2, nk: 1.1, hh: 2, fs: 1 };
@@ -1428,6 +1532,30 @@
       });
     });
     return out;
+  }
+
+  // How much of a still frame is the athlete and how much its equipment, and how far a loop moves the body: for the tests.
+  function census(id) {
+    var mv = ANIMS[id], sty = STYLES.det, look = { woman: false, skin: 1, hair: 1, cut: 1, n: 0 };
+    function count(m) {
+      ln = 0;
+      raster(sty, look, m, poseOf(sty, 0, m, m.still), 0, 0);
+      var n = ln;
+      for (var k = 0; k < ln; k++) V[list[k]] = 0;
+      ln = 0;
+      return n;
+    }
+    var all = count(mv), bare = count(assign({}, mv, { gear: null, bar: 0, rig: 0 }));
+    return { voxels: bare, gear: all - bare };
+  }
+  function travel(id) {
+    var mv = ANIMS[id], a = mv.pose(0), most = 0;
+    function flat(p) { return [p.py, p.pz].concat(p.h[0], p.h[1], p.f[0].slice(0, 3), p.f[1].slice(0, 3)); }
+    for (var t = 0; t < mv.N; t += 0.5) {
+      var b = flat(mv.pose(t));
+      flat(a).forEach(function (v, i) { most = Math.max(most, Math.abs(b[i] - v)); });
+    }
+    return most;
   }
 
   // ---- The voxel rasteriser and the bake into cube sprites
@@ -1853,8 +1981,9 @@
     return made;
   }
 
+  // A sprite says which animation it is a frame of, so a lane never shows a teammate's last pose of another one.
   function athlete(mvId, at, v, tc, budget, back) {
-    return baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc, back ? "b" : ""].join(":"), budget, function () {
+    var made = baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc, back ? "b" : ""].join(":"), budget, function () {
       var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
       turned = !!back !== !!P.flip;
       try {
@@ -1863,6 +1992,8 @@
         turned = false;
       }
     });
+    if (made) made.anim = mvId;
+    return made;
   }
 
   // One athlete's frame on its own, the same bake the track draws: for the movement catalogue page and its tests.
@@ -1943,6 +2074,14 @@
       if (i) tile(a - 1, -half, 2, L.lane, "rgba(242,238,230,.28)");
       if (near) paint(c, L.names[i], a + L.len / 2, half - 10, L.len - 8, 12, lit ? colour : "rgba(242,238,230,.4)");
     }
+    if (one.crew && one.crew.ring) {
+      c.strokeStyle = rgba(colour, 0.75);
+      c.lineWidth = 2;
+      c.beginPath();
+      c.ellipse(one.at.z, 0, one.crew.ring.along, one.crew.ring.across, 0, 0, 2 * Math.PI);
+      c.stroke();
+      one.ring = { z: one.at.z, along: one.crew.ring.along, across: one.crew.ring.across };
+    }
     for (i = 0; i * 8 < L.lane; i++) for (k = 0; k < 2; k++) {
       tile(L.arch + k * 5, -half + i * 8, 5, Math.min(8, L.lane - i * 8), (i + k) & 1 ? PAPER : INK);
     }
@@ -1976,14 +2115,16 @@
   function add3(list, e, x, z, bias) { if (e) list.push({ e: e, x: x, z: z, depth: x + z + (bias || 0) }); }
 
   function team(list, L, one, x, budget, stride, tick) {
-    var mv = ANIMS[one.at.anim], spots = formation(one.at.anim, L), whole = true;
+    var people = (one.crew || crew(L, one.state.p.slot, one.at, tick, still)).people, whole = true;
+    // A team doing one animation keeps a pose it has while the next bakes, as it always did; one doing several shows none.
+    var mixed = people.some(function (p) { return p.anim !== one.at.anim; });
     one.team.forEach(function (who, i) {
-      var f = still ? mv.still : (tick + i * (mv.N >> 2)) % mv.N;
+      var p = people[i], f = p.f;
       if (!still) f -= f % stride;
-      var e = athlete(one.at.anim, f, who, one.tc, budget, one.at.back);
+      var e = athlete(p.anim, f, who, one.tc, budget, one.at.back);
       if (e) one.last[i] = e;
       else whole = false;
-      add3(list, one.last[i], x + spots[i][0], one.at.z + spots[i][1], 0);
+      if (one.last[i] && (!mixed || one.last[i].anim === p.anim)) add3(list, one.last[i], x + p.x, one.at.z + p.z, 0);
     });
     return whole;
   }
@@ -2070,6 +2211,10 @@
       if (one.on) sc.shown++;
     });
     stride = Math.max(quick ? 2 : 1, stride, trackStride(athletesShown()));
+    sc.lanes.forEach(function (one) {
+      one.crew = crew(L, one.state.p.slot, one.at, tick, still);
+      one.ring = null;
+    });
     sc.lanes.forEach(function (one, i) { floor(o, v, L, one, laneX(L, i), near); });
     if (!near) {
       // Too small to read on every lane: once, larger, on the floor in front of the nearest one.
@@ -2135,10 +2280,12 @@
   function label(o, sc, v, blocked) {
     var c = o.c, L = sc.L, inside = [], outside = [], pins = [], followed = sc.map.mode === "follow" ? sc.map.id : null;
     sc.lanes.forEach(function (one, i) {
+      one.tag = String(one.lane);
       var head = project(v, laneX(L, i), HEAD - 4, one.at.z), feet = project(v, laneX(L, i), 20, one.at.z);
       var seen = feet[0] > 4 && feet[0] < o.w - 4 && feet[1] > 4 && feet[1] < o.h - 4, at = seen ? head : feet;
       (seen ? inside : outside).push({
         one: one, lane: one.lane, name: one.name, px: at[0], py: at[1], place: one.place && !one.ended ? one.place.text : "",
+        mode: one.crew && one.crew.sync ? labels.sync : "",
       });
     });
     c.textBaseline = "middle";
@@ -2155,6 +2302,7 @@
       c.textAlign = "left";
       tags(inside, o.w, o.h, function (t) { return c.measureText(t).width; }, blocked).forEach(function (tag, i) {
         var one = inside[i].one, x = tag.x + tag.placeWide, middle = tag.y + tag.h / 2 + 0.5;
+        one.tag = tag.text;
         c.fillStyle = LANE_COLOURS[one.tc];
         c.fillRect(x, tag.y, tag.w - tag.placeWide, tag.h);
         c.fillStyle = INK;
@@ -2456,7 +2604,7 @@
       standAll(sc, now);
     });
     // Whoever has never been drawn comes before anybody's next frame.
-    seen.forEach(function (sc) { introduce(sc, budget); });
+    seen.forEach(function (sc) { introduce(sc, budget, tick); });
     seen.forEach(function (sc) {
       if (!drawTrack(sc, now, budget, stride, tick, false)) return;
       drew++;
@@ -2465,11 +2613,17 @@
     if (drew && !still) account(performance.now() - began);
   }
 
-  function introduce(sc, budget) {
+  // A lane never drawn gets a still frame; so does a mixed crew's athlete whose last pose is of another animation, which
+  // team() would not show. A team doing one animation keeps its last pose, as it always did.
+  function introduce(sc, budget, tick) {
     sc.lanes.forEach(function (one) {
       if (one.on === false) return;
+      var people = crew(sc.L, one.state.p.slot, one.at, tick, still).people;
+      var mixed = people.some(function (p) { return p.anim !== one.at.anim; });
       one.team.forEach(function (who, i) {
-        if (!one.last[i]) one.last[i] = athlete(one.at.anim, ANIMS[one.at.anim].still, who, one.tc, budget);
+        var anim = people[i].anim;
+        if (one.last[i] && (!mixed || one.last[i].anim === anim)) return;
+        one.last[i] = athlete(anim, ANIMS[anim].still, who, one.tc, budget) || one.last[i];
       });
     });
   }
@@ -2501,7 +2655,7 @@
       var began = performance.now(), now = Date.now(), gliding = glide(sc, now);
       standAll(sc, now);
       var budget = { left: function () { return QUICK_BAKE_MS - (performance.now() - began); } };
-      introduce(sc, budget);
+      introduce(sc, budget, Math.floor(now * FPS / 1000));
       if (!drawTrack(sc, now, budget, keeps(level).stride, Math.floor(now * FPS / 1000), true)) return;
       gestures++;
       costs.push(performance.now() - began);
@@ -2577,10 +2731,13 @@
   // Called by live.js after every redraw with the heats now running. Each scene keeps its canvas, its state and the visitor's
   // view of it; a lane whose phase changed runs to its new station. A heat with no `track` to be in, as in «Tiempos», is kept
   // and not drawn; one that is no longer on the list is forgotten.
+  var labels = { sync: "SINCRO" };
+
   function sync(heats, options) {
     var chosen = options && STYLES[options.style] ? options.style : "det", now = Date.now(), keep = new Set();
     if (options && options.onLevel) onLevel = options.onLevel;
     if (options && options.onView) onView = options.onView;
+    if (options && options.words && options.words.sync) labels = { sync: String(options.words.sync) };
     if (chosen !== styleId) {
       styleId = chosen;
       scenes.forEach(function (sc) { sc.lanes.forEach(function (one) { one.last = []; }); });
@@ -2635,7 +2792,10 @@
     var now = Date.now();
     standAll(sc, now);
     return sc.lanes.map(function (one) {
-      return { lane: one.lane, slot: one.state.p.slot, round: one.state.p.round, anim: one.at.anim, moving: one.at.moving, back: !!one.at.back };
+      return {
+        lane: one.lane, slot: one.state.p.slot, round: one.state.p.round, anim: one.at.anim, moving: one.at.moving, back: !!one.at.back,
+        tag: one.tag || "", sync: !!(one.crew && one.crew.sync), z: one.at.z, ring: one.ring || null,
+      };
     });
   }
 
@@ -2663,6 +2823,10 @@
     advance: advance,
     spot: spot,
     formation: formation,
+    crew: crew,
+    holdOf: holdOf,
+    census: census,
+    travel: travel,
     sight: sight,
     whole: whole,
     fence: fence,

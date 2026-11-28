@@ -288,7 +288,7 @@
   // leaves the rows alone.
   function athletes() {
     if (window.CatchUpAvatars) {
-      return window.CatchUpAvatars.sync(scenes, { style: avatarStyle, onLevel: allow, onView: showView });
+      return window.CatchUpAvatars.sync(scenes, { style: avatarStyle, onLevel: allow, onView: showView, words: { sync: t("sync") } });
     }
     if (avatarsAsked || !scenes.some(function (one) { return one.track; })) return;
     avatarsAsked = true;
