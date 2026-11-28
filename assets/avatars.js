@@ -8,7 +8,7 @@
   // ---- Movements: what a phase's text names, and which animation draws it
 
   // Every name of CatchUp Live's movement catalogue, with the animation that draws it. `approx` marks a stand-in that is
-  // not the movement itself: today only the shuttle run, drawn as a run without its turns.
+  // not the movement itself: none today, as every movement has its own; a phase nobody knows gets the neutral lifter.
   var MOVES = [
     ["Back Squats", "backsquat", 0], ["Front Squats", "frontsquat", 0], ["Overhead Squats", "ohs", 0],
     ["Deadlifts", "deadlift", 0], ["Sumo Deadlifts", "sumo", 0], ["Romanian Deadlifts", "rdl", 0],
@@ -39,7 +39,7 @@
     ["Lunges", "lunge", 0],
     ["Row", "row", 0], ["BikeErg", "bike", 0], ["Bike", "bike", 0], ["Air Bike", "airbike", 0],
     ["Assault Bike", "airbike", 0], ["Echo Bike", "airbike", 0], ["Ski", "ski", 0], ["SkiErg", "ski", 0],
-    ["Run", "run", 0], ["Swim", "swim", 0], ["Shuttle Runs", "run", 1], ["Sled Push", "sledpush", 0],
+    ["Run", "run", 0], ["Swim", "swim", 0], ["Shuttle Runs", "shuttle", 0], ["Sled Push", "sledpush", 0],
     ["Sled Pull", "sledpull", 0],
     ["Plank", "plank", 0], ["Hollow Hold", "hollow", 0], ["Hip Thrusts", "hipthrust", 0],
     ["Back Extensions", "backext", 0], ["V-Ups", "vup", 0],
@@ -618,11 +618,16 @@
     var prev = STAND, full = keys.map(function (k) { prev = poseFrom(prev, typeof k[1] === "function" ? k[1](prev) : k[1]); return [k[0], prev]; });
     return full.concat(full.map(function (k) { return [k[0] + half, swapped(k[1])]; }));
   }
-  // A whole frame turned half round, for the rep done facing back the other way (over the box, over the bar).
-  function turnedAfter(fn, from) {
+  // A whole frame turned half round, for the rep done facing back the other way (over the box, over the bar). After
+  // frame [turnAt] of each half the body turns on its own axis, eased, so the next half starts where the turn ends.
+  function turnedAfter(fn, from, turnAt) {
     return function (t) {
-      var p = fn(t);
-      p.flip = (((t % (2 * from)) + 2 * from) % (2 * from)) >= from;
+      var p = fn(t), local = ((t % (2 * from)) + 2 * from) % (2 * from), u = local % from;
+      p.flip = local >= from;
+      if (turnAt !== undefined && u > turnAt) {
+        var s = (u - turnAt) / (from - turnAt);
+        p.yaw = Math.PI * s * s * (3 - 2 * s);
+      }
       return p;
     };
   }
@@ -1041,7 +1046,7 @@
       [n0 + 6, shifted({ py: 11.5, pz: -0.8, l: 0.35, f: [2.8, 2, 0, 0], h: [4.6, 11, 5] }, to, dy)], [n0 + 10, shifted(STAND, to, dy)],
     ];
   }
-  var BAR_FACING = turnedAfter(moves(burpeeThen(-11, broadJump(-11, 11, 28)).concat([[42, shifted(STAND, 11)]]), 44), 44);
+  var BAR_FACING = turnedAfter(moves(burpeeThen(-11, broadJump(-11, 11, 28)).concat([[42, shifted(STAND, 11)], [49, shifted(STAND, 11)]]), 50), 50, 43);
   // Over the bar sideways: the burpee beside it, a jump across, and the next rep on the other side.
   function lateral(px) { return function (o) { return function (prev) { var p = typeof o === "function" ? o(prev) : o; return assign({}, p, { px: px }); }; }; }
   function sideJump(n0) {
@@ -1076,8 +1081,8 @@
       [n0 + 16, shifted({ py: 11.5, pz: -0.8, l: 0.35, f: [2.8, 2, 0, 0], h: [4.6, 11, 5] }, -from)], [n0 + 20, shifted(STAND, -from)],
     ];
   }
-  var BBJO = turnedAfter(moves(burpeeThen(-15, boxOver(28, -15)).concat([[50, shifted(STAND, 15)]]), 52), 52);
-  var BJO = turnedAfter(moves([[0, shifted(STAND, -10)], [3, shifted(STAND, -10)]].concat(boxOver(5, -10)), 28), 28);
+  var BBJO = turnedAfter(moves(burpeeThen(-15, boxOver(28, -15)).concat([[50, shifted(STAND, 15)], [57, shifted(STAND, 15)]]), 58), 58, 51);
+  var BJO = turnedAfter(moves([[0, shifted(STAND, -10)], [3, shifted(STAND, -10)]].concat(boxOver(5, -10), [[33, shifted(STAND, 10)]]), 34), 34, 27);
   var BOX_JUMP = moves([[0, shifted(STAND, -9)], [3, shifted(STAND, -9)], [6, shifted(CROUCH, -9)], [9, shifted({ py: 22, l: 0.1, f: [2.6, 13.8, -2, 0.5], h: [4.4, 24, 5] }, -4.5)],
     [12, shifted({ py: 20.4, pz: -0.8, l: 0.4, f: [2.8, 14, 0, 0], h: [4.6, 22.5, 5] }, 0)], [16, shifted(STAND, 0, 12)], [20, shifted(STAND, 0, 12)],
     [24, shifted({ py: 21, fa: [2.8, 14, 0, 0], fb: [2.7, 9, -5, 0.4], h: [4.2, 19, 0.8] }, 0)], [27, shifted({ py: 15, pz: -6.5, fb: [2.7, 2, -9, 0], fa: [2.7, 14, -1, 0], h: [4.2, 13, -5.8] }, 0)], [31, shifted(STAND, -9)]], 36);
@@ -1088,7 +1093,7 @@
   function dbSides(o) { return function (prev) { var p = typeof o === "function" ? o(prev) : o; return assign({}, p, { h: [5.2, (p.py || prev.py) - 2.2, (p.pz !== undefined ? p.pz : prev.pz) + 0.6], ap: [0.6, -0.8, -0.3] }); }; }
   var STEP_OVER = turnedAfter(moves([[0, dbSides(shifted(STAND, -9))], [3, dbSides({})], [7, dbSides({ fa: [2.6, 12, -1.6, 0], py: 15.2, pz: -7.4, l: 0.25 })],
     [11, dbSides({ py: 24.4, pz: -1, l: 0.06, fb: [2.6, 12, -1, 0] })], [14, dbSides({ fa: [2.6, 13, 3, 0.2] })], [18, dbSides({ py: 15.5, pz: 4, l: 0.08, fa: [2.6, 2, 8.6, 0] })],
-    [22, dbSides(shifted(STAND, 9))], [27, dbSides({})]], 28), 28);
+    [22, dbSides(shifted(STAND, 9))], [33, dbSides({})]], 34), 34, 27);
 
   // Bodyweight on the floor: wall balls, pistols, lunges, sit-ups, the core holds and the jump rope.
   function ballAt(o, up, fwd) {
@@ -1354,14 +1359,14 @@
   gym("rope", ROPE_CLIMB, ROPE_C.N, 18, { gear: rope });
   gym("legless", LEGLESS, LEGLESS_C.N, 18, { gear: rope });
   gym("pegboard", PEGBOARD, PEG_C.N, 18, { gear: pegboard });
-  gym("barfacing", BAR_FACING, 88, 15, { gear: floorBarAcross, form: COLUMN });
+  gym("barfacing", BAR_FACING, 100, 15, { gear: floorBarAcross, form: COLUMN });
   gym("burpeebar", BURPEE_OVER, 88, 15, { gear: floorBarAlong, form: COLUMN });
   gym("burpeedb", BURPEE_OVER, 88, 15, { gear: floorDb, form: [2, 24, 34, 0] });
-  gym("bbjo", BBJO, 104, 37, { gear: plyoBox(12), form: [2, 30, 50, 0] });
-  gym("bjo", BJO, 56, 14, { gear: plyoBox(12), form: [2, 30, 34, 0] });
+  gym("bbjo", BBJO, 116, 37, { gear: plyoBox(12), form: [2, 30, 50, 0] });
+  gym("bjo", BJO, 68, 14, { gear: plyoBox(12), form: [2, 30, 34, 0] });
   gym("boxjump", BOX_JUMP, 36, 16, { gear: plyoBox(12), form: [2, 30, 34, 0] });
   gym("stepup", STEP_UP, 48, 11, { gear: plyoBox(10), form: [2, 30, 30, 0] });
-  gym("dbstepover", STEP_OVER, 56, 11, { gear: gearOf(plyoBox(10), "db2"), form: [2, 30, 34, 0] });
+  gym("dbstepover", STEP_OVER, 68, 11, { gear: plyoBox(10), held: GEAR.db2, form: [2, 30, 34, 0] });
 
   function floorMove(id, pose, N, still, extra) { register(id, assign({ N: N, pose: pose, form: [2, 28, 22, -4], still: still }, extra)); }
   floorMove("wallball", WALL_BALL, 32, 9, { gear: gearOf("ball", wallTarget) });
@@ -1383,6 +1388,19 @@
   floorMove("swim", swim, 16, 4, { gear: pool, form: [2, 26, 34, 0] });
   floorMove("sledpush", sledPush, 16, 4, { gear: sled, form: [2, 26, 34, 0] });
   floorMove("sledpull", sledPull, 16, 4, { gear: sledRope, form: [2, 26, 34, 0] });
+
+  // A shuttle run: a stride, a lunge to touch the line, and the turn back for the next length.
+  var RUN_KEY = (function () {
+    var p = run(0);
+    return { py: p.py, pz: 0, l: p.l, hp: p.hp, fa: p.f[0], fb: p.f[1], ha: p.h[0], hb: p.h[1], ap: [0.5, -0.8, -0.55] };
+  })();
+  var SHUTTLE_TOUCH = moves([
+    [16, RUN_KEY], [20, { py: 8.2, pz: 0.6, l: 1, hp: -0.2, fa: [2.6, 2, 6, 0], fb: [2.6, 3, -5, 1], ha: [3.6, 2.4, 9.2], hb: [4.6, 9, -1] }],
+    [23, {}], [27, { py: 13.8, pz: 0, l: 0.25, hp: 0, fa: [2.6, 2, 1, 0], fb: [2.6, 2, -1, 0], ha: [4.2, 12.5, 2], hb: [4.2, 12.5, -0.5] }],
+    [31, RUN_KEY],
+  ], 32);
+  var SHUTTLE = turnedAfter(function (t) { var u = ((t % 32) + 32) % 32; return u < 16 ? run(u) : SHUTTLE_TOUCH(u); }, 32, 24);
+  register("shuttle", { N: 64, pose: SHUTTLE, form: [2, 18, 18, 0], prop: "cones", still: 4 });
 
   // ---- Holding a part while teammates work, and waiting a turn: still poses with a slow breath, each with its equipment
 
@@ -1493,7 +1511,7 @@
   function poseOf(sty, g, mv, t) {
     var P = mv.pose(t), k = sty.G[0].k, r = sty.G[g].r, Y0 = mv.rig || mv.hang ? barY(sty) : 0, q = k * r;
     var out = {
-      py: Y0 + (P.py * k - Y0) * r, pz: P.pz * q, px: (P.px || 0) * q, l: P.l, hp: P.hp, ap: P.ap, lp: P.lp, g: P.g, flip: P.flip,
+      py: Y0 + (P.py * k - Y0) * r, pz: P.pz * q, px: (P.px || 0) * q, l: P.l, hp: P.hp, ap: P.ap, lp: P.lp, g: P.g, flip: P.flip, yaw: P.yaw,
       f: P.f.map(function (f) { return [f[0] * q, Y0 + (f[1] * k - Y0) * r, f[2] * q, f[3]]; }),
       h: P.h.map(function (h) { return [h[0] * q, Y0 + (h[1] * k - Y0) * r, h[2] * q]; }),
     };
@@ -1569,10 +1587,43 @@
       x = 2 * C - 1 - x;
       z = 2 * C - 1 - z;
     }
+    putCell(x, y, z, c);
+  }
+  // Equipment drawn after a turned body goes only where the body is not, as if it had been drawn first: [bodyCells] marks
+  // the turned body's cells while [under] is on.
+  var under = false, bodyCells = new Uint8Array(NX * NY * NZ);
+  function putCell(x, y, z, c) {
     if (x < 0 || y < 0 || z < 0 || x >= NX || y >= NY || z >= NZ || ln >= list.length) return;
     var i = x * SX + y * SY + z;
+    if (under && bodyCells[i]) return;
     if (!V[i]) list[ln++] = i;
     V[i] = c;
+  }
+
+  // The voxels drawn since [from] turned by [yaw] about the vertical line through (cx, cz), in the grid's own space. Each
+  // cell takes the colour of the cell it comes from, so a turn leaves no holes in the body.
+  function turnVoxels(from, cx, cz, yaw) {
+    var cells = new Map(), x0 = NX, x1 = 0, y0 = NY, y1 = 0, z0 = NZ, z1 = 0, k, i, x, y, z;
+    for (k = from; k < ln; k++) {
+      i = list[k];
+      x = (i / SX) | 0;
+      y = ((i / SY) | 0) % NY;
+      z = i % NZ;
+      cells.set(i, V[i]);
+      V[i] = 0;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); z0 = Math.min(z0, z); z1 = Math.max(z1, z);
+    }
+    ln = from;
+    var r = Math.ceil(Math.max(Math.hypot(x0 - cx, z0 - cz), Math.hypot(x1 + 1 - cx, z0 - cz), Math.hypot(x0 - cx, z1 + 1 - cz), Math.hypot(x1 + 1 - cx, z1 + 1 - cz)));
+    var c = Math.cos(yaw), s = Math.sin(yaw);
+    for (x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) for (z = Math.floor(cz - r); z <= Math.ceil(cz + r); z++) {
+      var dx = x + 0.5 - cx, dz = z + 0.5 - cz, sx = Math.floor(cx + dx * c + dz * s), sz = Math.floor(cz - dx * s + dz * c);
+      if (sx < 0 || sz < 0 || sx >= NX || sz >= NZ) continue;
+      for (y = y0; y <= y1; y++) {
+        var col = cells.get(sx * SX + y * SY + sz);
+        if (col) putCell(x, y, z, col);
+      }
+    }
   }
   function W3(p) { return [C + p[0], p[1], C + p[2]]; }
 
@@ -1632,8 +1683,11 @@
     var shirt = team, acc = team, shs = kit ? KIT_SHORTS[tc] : 2, stp = KIT_STRIPE[tc];
     var crop = g && !kit && [1, 0, 1, 0][cut], leg = g && !kit && [0, 1, 1, 0][cut], top0 = T.sv + (crop ? 2.3 : 0);
     var vb0 = T.sv + 0.9, vb1 = vb0 + (g ? 4 : 5);
-    // Equipment first, so the body drawn over it holds the bar, the rope or the ball.
-    if (mv.gear) mv.gear(S, P, gd);
+    // Equipment first, so the body drawn over it holds the bar, the rope or the ball; during a turn the body and what it
+    // holds are drawn first and turned, and the equipment around them after, only where they are not.
+    var turning = P.yaw > 0 && P.yaw < Math.PI, turnFrom = ln;
+    if (mv.gear && !turning) mv.gear(S, P, gd);
+    if (mv.held) mv.held(S, P, gd);
     // The torso: an oriented box with a width and depth profile (chest and glutes asymmetric on a woman).
     var pa = W3(S.pel), pb = W3(S.neck);
     var lo = [0, 1, 2].map(function (i) { return Math.max(0, Math.floor(Math.min(pa[i], pb[i]) - 8)); });
@@ -1729,6 +1783,21 @@
         for (a2 = -2; a2 < 2; a2++) for (b2 = -2; b2 < 2; b2++) put(at[0] + a2, 0, at[2] + b2, 6);
         for (y2 = 1; y2 <= by + 1; y2++) for (a2 = -1; a2 < 1; a2++) for (b2 = -1; b2 < 1; b2++) put(at[0] + a2, y2, at[2] + b2, 1);
       });
+    }
+    if (turning) {
+      // About the athlete's own vertical line, wherever the frame put it (and mirrored with it, facing back).
+      var cx = C + S.pel[0], cz = C + S.pel[2];
+      if (turned) { cx = 2 * C - cx; cz = 2 * C - cz; }
+      turnVoxels(turnFrom, cx, cz, P.yaw);
+      var turnedEnd = ln, k;
+      for (k = turnFrom; k < turnedEnd; k++) bodyCells[list[k]] = 1;
+      under = true;
+      try {
+        if (mv.gear) mv.gear(S, P, gd);
+      } finally {
+        under = false;
+        for (k = turnFrom; k < turnedEnd; k++) bodyCells[list[k]] = 0;
+      }
     }
   }
   // Half the rig's width: posts a forearm clear of the hands on either side, about 1.1 m apart.
@@ -1997,11 +2066,13 @@
   }
 
   // One athlete's frame on its own, the same bake the track draws: for the movement catalogue page and its tests.
-  function sprite(mvId, at, v, tc, sid, back) {
+  // [unturned] draws the frame's pose without its turn, for a test to tell the turn apart from the pose.
+  function sprite(mvId, at, v, tc, sid, back, unturned) {
     var keep = styleId;
     styleId = sid || styleId;
     try {
       var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
+      if (unturned) P.yaw = 0;
       ln = 0;
       turned = !!back !== !!P.flip;
       try {
@@ -2812,6 +2883,8 @@
     ANIMS: Object.keys(ANIMS),
     register: register,
     sprite: sprite,
+    // Where an athlete faces in a frame, in radians: 0 down the lane, PI back; the tests read a turn from it.
+    facing: function (id, t) { var p = ANIMS[id].pose(t); return (p.flip ? Math.PI : 0) + (p.yaw || 0); },
     anim: function (id) { var a = ANIMS[id]; return a && { N: a.N, still: a.still }; },
     movementOf: movementOf,
     teamOf: teamOf,
