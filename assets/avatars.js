@@ -249,6 +249,7 @@
 
   // Who stands where around the station's middle, [across, along]: the animation's rows, two abreast where lanes are narrow.
   function formation(anim, L) {
+    if (hangs(anim)) return rigGrid(L, L.size);
     var f = ANIMS[anim].form, abreast = L.tight ? Math.min(2, f[0]) : f[0], spots = [];
     var pitch = L.tight ? Math.min(26, f[1]) : f[1], shift = L.size > 1 && !L.tight ? f[3] : 0;
     var rows = Math.ceil(L.size / abreast);
@@ -274,17 +275,26 @@
       return { sync: false, ring: null, people: people };
     }
     if (w.work === "SPLIT") {
-      // A bar, a rig or a bench is wider than a teammate's spacing: those stand in a file in the middle, the rest beside it.
-      var mine = [], file = [], side = [], deep = 16;
+      // A bar or a bench is wider than a teammate's spacing: those stand in a file in the middle, the rest beside it. Whoever
+      // hangs does it from the rig at the back of the station, where every lane's rig stands in the same line.
+      var mine = [], hanging = [], file = [], side = [], deep = 16;
       for (i = 0; i < L.size; i++) {
         mine.push(w.parts[i] || "rest");
-        (ANIMS[mine[i]].form[0] === 1 ? file : side).push(i);
+        (hangs(mine[i]) ? hanging : ANIMS[mine[i]].form[0] === 1 ? file : side).push(i);
       }
       side.forEach(function (k) { deep = Math.max(deep, Math.min(34, ANIMS[mine[k]].form[2])); });
       var places = [];
       file.forEach(function (k, n) { places[k] = [0, ((file.length - 1) / 2 - n) * COLUMN[2]]; });
       var by = file.length ? beside(L, side.length, L.tight ? 20 : 24, deep) : grid(side.length, 2, 28, deep);
       side.forEach(function (k, n) { places[k] = by[n]; });
+      if (hanging.length) {
+        var bars = rigGrid(L, hanging.length), rows = bars[0][1] - bars[bars.length - 1][1], others = file.concat(side);
+        var back = others.length ? L.len / 2 - 8 - rows / 2 : 0, top = -Infinity;
+        others.forEach(function (k) { top = Math.max(top, places[k][1]); });
+        var down = Math.min(0, back - rows / 2 - 12 - top);
+        others.forEach(function (k) { places[k] = [places[k][0], places[k][1] + down]; });
+        hanging.forEach(function (k, n) { places[k] = [bars[n][0], bars[n][1] + back]; });
+      }
       for (i = 0; i < L.size; i++) people.push({ anim: mine[i], f: frame(ANIMS[mine[i]], i), x: places[i][0], z: places[i][1] });
       return { sync: false, ring: null, people: people };
     }
@@ -313,6 +323,63 @@
     var across = 0, along = 0;
     people.forEach(function (p) { across = Math.max(across, Math.abs(p.x) + 9); along = Math.max(along, Math.abs(p.z) + 12); });
     return { across: Math.min(across, L.lane / 2 - 4), along: Math.min(along, L.len / 2 - 3) };
+  }
+
+  // ---- The rig: one long bar across two neighbouring lanes with a post at each end, as competitions build it, about a
+  // metre of bar per athlete. A team that does not fit abreast hangs from a second bar behind, like a double-sided rig.
+
+  var RIG_PITCH = 22, RIG_GRIP = 11, RIG_ROW = 20;
+
+  function hangs(anim) { return !!(ANIMS[anim] && ANIMS[anim].rig); }
+
+  // `count` places [across, along] on the rig, as many abreast as keep the posts' feet inside the lane's lines.
+  function rigGrid(L, count) {
+    var most = Math.max(1, Math.floor((L.lane / 2 - RIG_HALF - 5) * 2 / RIG_PITCH) + 1);
+    var rows = Math.ceil(count / most), abreast = Math.ceil(count / rows), spots = [];
+    for (var i = 0; i < count; i++) {
+      var row = Math.floor(i / abreast), here = Math.min(abreast, count - row * abreast);
+      spots.push([((i % abreast) - (here - 1) / 2) * RIG_PITCH, ((rows - 1) / 2 - row) * RIG_ROW]);
+    }
+    return spots;
+  }
+
+  // A station's bars, one per pair of lanes (an odd last lane on its own) and row, wherever its lanes are: the floor's
+  // equipment. `z` is along the station from its middle; `posts` and `cells` are across the whole track.
+  function rigs(L, slot) {
+    var memo = L.rigMemo || (L.rigMemo = {});
+    if (memo[slot]) return memo[slot];
+    var rows = {}, out = [];
+    if (slot < L.n) {
+      crew(L, slot, { anim: L.anims[slot], moving: false }, 0, true).people.forEach(function (p) {
+        if (!hangs(p.anim)) return;
+        var r = rows[p.z] || (rows[p.z] = [Infinity, -Infinity]);
+        r[0] = Math.min(r[0], p.x);
+        r[1] = Math.max(r[1], p.x);
+      });
+    }
+    for (var a = 0; a < L.lanes; a += 2) {
+      var b = Math.min(a + 1, L.lanes - 1);
+      Object.keys(rows).forEach(function (z) {
+        var posts = [laneX(L, a) + rows[z][0] - RIG_HALF, laneX(L, b) + rows[z][1] + RIG_HALF];
+        out.push({ lanes: a === b ? [a] : [a, b], z: +z, posts: posts, cells: [posts[0] - 1, posts[1]] });
+      });
+    }
+    return (memo[slot] = out);
+  }
+
+  // What of a bar nobody's hands cover, in pieces of 8 cells at most: a hanging athlete's sprite brings their own metre.
+  function rigGaps(bar, hands) {
+    var taken = {}, out = [], from = null;
+    hands.forEach(function (x) { for (var c = x - RIG_GRIP; c < x + RIG_GRIP; c++) taken[c] = 1; });
+    for (var c = bar.cells[0]; c <= bar.cells[1] + 1; c++) {
+      var free = c <= bar.cells[1] && !taken[c];
+      if (free && from === null) from = c;
+      else if (from !== null && (!free || c - from === 8)) {
+        out.push([from, c - 1]);
+        from = free ? c : null;
+      }
+    }
+    return out;
   }
 
   // ---- The camera: the athletes' own, mirrored as they are, so +z runs right and down
@@ -1581,7 +1648,7 @@
   var NX = 80, NY = 96, NZ = 80, C = 40, SX = NY * NZ, SY = NZ;
   var V = new Uint8Array(NX * NY * NZ), list = new Int32Array(1 << 16), ln = 0;
   // Turned half round about the athlete's own vertical axis, for a bake that faces back down the lane.
-  var turned = false;
+  var turned = false, alone = false;
   function put(x, y, z, c) {
     if (turned) {
       x = 2 * C - 1 - x;
@@ -1773,9 +1840,10 @@
     if (mv.bar) {
       barAt(W3([P.px || 0, (P.h[0][1] + P.h[1][1]) / 2, (P.h[0][2] + P.h[1][2]) / 2]).map(Math.round), gd, 0);
     }
-    // Each athlete hangs from a station of their own: a bar between two posts. One bar across the team would run
-    // diagonally up the stage in this camera and take the height of two athletes.
-    if (mv.rig) {
+    // On the track an athlete brings only their metre of the rig's bar (rigGaps draws the rest); on their own, as in the
+    // movement catalogue, a bar of their own between two posts.
+    if (mv.rig && !alone) cylinder(W3([0, barY(sty), 0]).map(Math.round), RIG_GRIP, 1, 4);
+    if (mv.rig && alone) {
       var by = barY(sty), half = RIG_HALF;
       cylinder(W3([0, by, 0]).map(Math.round), half + 1, 1, 4);
       [-half, half].forEach(function (px) {
@@ -1971,14 +2039,6 @@
   }
   var PROPS = {
     bar: function (L, sty) { formation("snatch", L).forEach(function (f) { barbell(f[0], f[1], sty); }); },
-    rig: function (L, sty) {
-      var by = Math.round(barY(sty));
-      formation("pullup", L).forEach(function (f) {
-        var x = Math.round(f[0]), z = Math.round(f[1]);
-        cylinder([C + x, by, C + z], RIG_HALF + 1, 1, 4);
-        [-RIG_HALF, RIG_HALF].forEach(function (px) { box(x + px - 2, 0, z - 2, 4, 1, 4, 6); box(x + px - 1, 1, z - 1, 2, by + 1, 2, 1); });
-      });
-    },
     cones: function (L) {
       [-1, 0, 1].forEach(function (k) {
         var x = 6 - Math.round(L.lane / 2), z = Math.round(k * Math.min(30, L.len * 0.32));
@@ -2065,7 +2125,8 @@
     return made;
   }
 
-  // One athlete's frame on its own, the same bake the track draws: for the movement catalogue page and its tests.
+  // One athlete's frame on its own, as the track bakes it but with a rig of their own when they hang: for the movement
+  // catalogue page and its tests.
   // [unturned] draws the frame's pose without its turn, for a test to tell the turn apart from the pose.
   function sprite(mvId, at, v, tc, sid, back, unturned) {
     var keep = styleId;
@@ -2075,10 +2136,12 @@
       if (unturned) P.yaw = 0;
       ln = 0;
       turned = !!back !== !!P.flip;
+      alone = true;
       try {
         raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
       } finally {
         turned = false;
+        alone = false;
       }
       return bake(sty, camera(VOXEL));
     } finally {
@@ -2178,14 +2241,50 @@
     var seen = shownOf(o, v, L, x), from = seen[0] - 60, to = seen[1] + 130;
     for (var i = 0; i < L.n; i++) {
       var id = L.props[i], z = L.start + (i + 0.5) * L.len, busy = one.state.p.slot === i && !one.at.moving && one.at.anim !== "idle";
-      if (!id || (busy && id !== "cones") || z < from || z > to) continue;
+      if (!id || id === "rig" || (busy && id !== "cones") || z < from || z > to) continue;
       add3(list, equipment(id, L, 0, budget), x, z, id === "bar" ? 0 : -24);
     }
     if (L.arch >= from && L.arch <= to) add3(list, equipment("arch", L, one.tc, budget), x, L.arch + 3, -10);
   }
+  // Every station's rigs, whoever is at it: the pieces nobody hangs from and the posts. Says what it drew, for the tests,
+  // and `whole` false when a piece waits for the bake budget, so the track draws again.
+  function rigging(list, o, v, L, hung, budget) {
+    var drawn = [], whole = true;
+    function put(e, x, z, bias) {
+      if (e) add3(list, e, x, z, bias);
+      else whole = false;
+      return !!e;
+    }
+    for (var i = 0; i < L.n; i++) {
+      var middle = L.start + (i + 0.5) * L.len;
+      rigs(L, i).forEach(function (bar) {
+        var a = shownOf(o, v, L, laneX(L, bar.lanes[0])), b = shownOf(o, v, L, laneX(L, bar.lanes[bar.lanes.length - 1]));
+        var z = middle + bar.z;
+        if (z < Math.min(a[0], b[0]) - 60 || z > Math.max(a[1], b[1]) + 130) return;
+        var hands = hung.filter(function (h) { return Math.abs(h.z - z) < 0.5 && h.x > bar.posts[0] && h.x < bar.posts[1]; })
+          .map(function (h) { return h.x; });
+        var pieces = rigGaps(bar, hands), all = true;
+        pieces.forEach(function (g) { all = put(rigPiece(g[1] - g[0] + 1, budget), g[0], z, (g[1] - g[0]) / 2) && all; });
+        bar.posts.forEach(function (x) { all = put(rigPiece(0, budget), x, z, 0) && all; });
+        drawn.push({ station: i, lanes: bar.lanes, z: bar.z, cells: bar.cells, hands: hands, pieces: pieces, drawn: all });
+      });
+    }
+    return { bars: drawn, whole: whole };
+  }
+  // A post (cells x-1 and x of its anchor) or `len` cells of bar from its anchor: the same cells an athlete's metre fills.
+  function rigPiece(len, budget) {
+    return baked([styleId, "rig", len].join(":"), budget, function () {
+      var by = Math.round(barY(STYLES[styleId]));
+      if (len) box(0, by - 1, -1, len, 2, 2, 4);
+      else {
+        box(-2, 0, -2, 4, 1, 4, 6);
+        box(-1, 1, -1, 2, by + 1, 2, 1);
+      }
+    });
+  }
   function add3(list, e, x, z, bias) { if (e) list.push({ e: e, x: x, z: z, depth: x + z + (bias || 0) }); }
 
-  function team(list, L, one, x, budget, stride, tick) {
+  function team(list, L, one, x, budget, stride, tick, hung) {
     var people = (one.crew || crew(L, one.state.p.slot, one.at, tick, still)).people, whole = true;
     // A team doing one animation keeps a pose it has while the next bakes, as it always did; one doing several shows none.
     var mixed = people.some(function (p) { return p.anim !== one.at.anim; });
@@ -2195,7 +2294,12 @@
       var e = athlete(p.anim, f, who, one.tc, budget, one.at.back);
       if (e) one.last[i] = e;
       else whole = false;
-      if (one.last[i] && (!mixed || one.last[i].anim === p.anim)) add3(list, one.last[i], x + p.x, one.at.z + p.z, 0);
+      // A hanging pose kept while a run bakes would carry its metre of bar away from the rig.
+      var stale = one.last[i] && one.at.moving && hangs(one.last[i].anim);
+      if (one.last[i] && !stale && (!mixed || one.last[i].anim === p.anim)) {
+        add3(list, one.last[i], x + p.x, one.at.z + p.z, 0);
+        if (hung && hangs(one.last[i].anim)) hung.push({ x: x + p.x, z: one.at.z + p.z });
+      }
     });
     return whole;
   }
@@ -2294,10 +2398,14 @@
     }
     sc.lanes.forEach(function (one, i) { stand(list, o, v, L, one, laneX(L, i), budget); });
     // A different lane first each time, so on a slow phone every team gets its turn to be baked.
+    var hung = [];
     for (var k = 0; k < count; k++) {
       var i = (k + tick) % count;
-      if (sc.lanes[i].on && !team(list, L, sc.lanes[i], laneX(L, i), budget, stride, tick)) full = false;
+      if (sc.lanes[i].on && !team(list, L, sc.lanes[i], laneX(L, i), budget, stride, tick, hung)) full = false;
     }
+    var rig = rigging(list, o, v, L, hung, budget);
+    sc.rig = rig.bars;
+    if (!rig.whole) full = false;
     flush(o, v, list);
     var blocked = controls(sc, sc.canvas), popping = ends(o, sc, v, now);
     label(o, sc, v, blocked);
@@ -2491,7 +2599,7 @@
     var cam = m.to || m.cam, seen = m.cam || {};
     return {
       mode: m.mode, id: m.id, s: seen.s, x: seen.x, y: seen.y, w: m.w, h: m.h, least: cam ? whole(sc.L, m.w, m.h).s : null,
-      want: m.want, shown: sc.shown, frames: sc.frames, pins: sc.pins.slice(),
+      want: m.want, shown: sc.shown, frames: sc.frames, pins: sc.pins.slice(), rig: sc.rig || [],
     };
   }
 
@@ -2885,7 +2993,7 @@
     sprite: sprite,
     // Where an athlete faces in a frame, in radians: 0 down the lane, PI back; the tests read a turn from it.
     facing: function (id, t) { var p = ANIMS[id].pose(t); return (p.flip ? Math.PI : 0) + (p.yaw || 0); },
-    anim: function (id) { var a = ANIMS[id]; return a && { N: a.N, still: a.still }; },
+    anim: function (id) { var a = ANIMS[id]; return a && { N: a.N, still: a.still, rig: !!a.rig }; },
     movementOf: movementOf,
     teamOf: teamOf,
     colourOf: colourOf,
@@ -2897,6 +3005,8 @@
     spot: spot,
     formation: formation,
     crew: crew,
+    rigs: rigs,
+    rigGaps: rigGaps,
     holdOf: holdOf,
     census: census,
     travel: travel,
