@@ -7,42 +7,42 @@
 
   // ---- Movements: what a phase's text names, and which animation draws it
 
-  // Every name of CatchUp Live's movement catalogue, with the animation that stands in for it. `approx` marks a stand-in
-  // that is not the movement itself: a later batch of animations replaces those rows, and only those.
+  // Every name of CatchUp Live's movement catalogue, with the animation that draws it. `approx` marks a stand-in that is
+  // not the movement itself: today only the shuttle run, drawn as a run without its turns.
   var MOVES = [
-    ["Back Squats", "squat", 1], ["Front Squats", "squat", 1], ["Overhead Squats", "squat", 1],
-    ["Deadlifts", "generic", 1], ["Sumo Deadlifts", "generic", 1], ["Romanian Deadlifts", "generic", 1],
-    ["Cleans", "snatch", 1], ["Power Cleans", "snatch", 1], ["Squat Cleans", "snatch", 1],
-    ["Hang Power Cleans", "snatch", 1], ["Clean and Jerks", "snatch", 1], ["Snatches", "snatch", 0],
-    ["Power Snatches", "snatch", 1], ["Squat Snatches", "snatch", 0], ["Hang Power Snatches", "snatch", 1],
-    ["Push Presses", "generic", 1], ["Push Jerks", "generic", 1], ["Split Jerks", "generic", 1],
-    ["Strict Presses", "generic", 1], ["Bench Presses", "generic", 1], ["Thrusters", "squat", 1],
-    ["Front Rack Lunges", "generic", 1], ["Overhead Lunges", "generic", 1], ["Good Mornings", "generic", 1],
-    ["Bent Over Rows", "generic", 1],
-    ["DB Snatches", "snatch", 1], ["DB Cleans", "snatch", 1], ["DB Clean and Jerks", "snatch", 1],
-    ["DB Thrusters", "squat", 1], ["DB Push Presses", "generic", 1], ["DB Box Step-Overs", "generic", 1],
-    ["DB Rows", "generic", 1], ["Devil Presses", "burpee", 1], ["Renegade Rows", "generic", 1],
-    ["Goblet Squats", "squat", 1], ["Kettlebell Swings", "generic", 1], ["KB Snatches", "snatch", 1],
-    ["KB Cleans", "snatch", 1], ["Turkish Get-Ups", "generic", 1], ["Farmers Carry", "run", 1],
-    ["Sandbag Cleans", "generic", 1],
-    ["Pull-Ups", "pullup", 0], ["Chest-to-Bar Pull-Ups", "pullup", 1], ["Strict Pull-Ups", "pullup", 1],
-    ["Muscle-Ups", "pullup", 1], ["Bar Muscle-Ups", "pullup", 1], ["Ring Muscle-Ups", "pullup", 1],
-    ["Toes-to-Bar", "pullup", 1], ["Knees-to-Elbows", "pullup", 1], ["Handstand Push-Ups", "generic", 1],
-    ["Handstand Walk", "generic", 1], ["Wall Walks", "generic", 1], ["Push-Ups", "burpee", 1],
-    ["Dips", "generic", 1], ["Ring Dips", "generic", 1], ["Burpees", "burpee", 0],
-    ["Bar-Facing Burpees", "burpee", 1], ["Burpees Over the Bar", "burpee", 1],
-    ["Lateral Burpees Over the DB", "burpee", 1], ["Burpee Box Jump Overs", "burpee", 1], ["Box Jumps", "squat", 1],
-    ["Box Jump Overs", "squat", 1], ["Box Step-Ups", "generic", 1], ["Pistols", "squat", 1],
-    ["Air Squats", "squat", 0], ["Wall Balls", "squat", 1], ["Sit-Ups", "generic", 1], ["GHD Sit-Ups", "generic", 1],
-    ["Rope Climbs", "pullup", 1], ["Legless Rope Climbs", "pullup", 1], ["Pegboard Ascents", "pullup", 1],
-    ["Double Unders", "generic", 1], ["Single Unders", "generic", 1], ["Walking Lunges", "generic", 1],
-    ["Lunges", "generic", 1],
-    ["Row", "generic", 1], ["BikeErg", "generic", 1], ["Bike", "generic", 1], ["Air Bike", "generic", 1],
-    ["Assault Bike", "generic", 1], ["Echo Bike", "generic", 1], ["Ski", "generic", 1], ["SkiErg", "generic", 1],
-    ["Run", "run", 0], ["Swim", "generic", 1], ["Shuttle Runs", "run", 1], ["Sled Push", "run", 1],
-    ["Sled Pull", "generic", 1],
-    ["Plank", "generic", 1], ["Hollow Hold", "generic", 1], ["Hip Thrusts", "generic", 1],
-    ["Back Extensions", "generic", 1], ["V-Ups", "generic", 1],
+    ["Back Squats", "backsquat", 0], ["Front Squats", "frontsquat", 0], ["Overhead Squats", "ohs", 0],
+    ["Deadlifts", "deadlift", 0], ["Sumo Deadlifts", "sumo", 0], ["Romanian Deadlifts", "rdl", 0],
+    ["Cleans", "clean", 0], ["Power Cleans", "powerclean", 0], ["Squat Cleans", "clean", 0],
+    ["Hang Power Cleans", "hangclean", 0], ["Clean and Jerks", "cleanjerk", 0], ["Snatches", "snatch", 0],
+    ["Power Snatches", "powersnatch", 0], ["Squat Snatches", "snatch", 0], ["Hang Power Snatches", "hangsnatch", 0],
+    ["Push Presses", "pushpress", 0], ["Push Jerks", "pushjerk", 0], ["Split Jerks", "splitjerk", 0],
+    ["Strict Presses", "press", 0], ["Bench Presses", "bench", 0], ["Thrusters", "thruster", 0],
+    ["Front Rack Lunges", "racklunge", 0], ["Overhead Lunges", "ohlunge", 0], ["Good Mornings", "goodmorning", 0],
+    ["Bent Over Rows", "bbrow", 0],
+    ["DB Snatches", "dbsnatch", 0], ["DB Cleans", "dbclean", 0], ["DB Clean and Jerks", "dbcleanjerk", 0],
+    ["DB Thrusters", "dbthruster", 0], ["DB Push Presses", "dbpushpress", 0], ["DB Box Step-Overs", "dbstepover", 0],
+    ["DB Rows", "dbrow", 0], ["Devil Presses", "devilpress", 0], ["Renegade Rows", "renegade", 0],
+    ["Goblet Squats", "goblet", 0], ["Kettlebell Swings", "kbswing", 0], ["KB Snatches", "kbsnatch", 0],
+    ["KB Cleans", "kbclean", 0], ["Turkish Get-Ups", "tgu", 0], ["Farmers Carry", "farmers", 0],
+    ["Sandbag Cleans", "sandbag", 0],
+    ["Pull-Ups", "pullup", 0], ["Chest-to-Bar Pull-Ups", "c2b", 0], ["Strict Pull-Ups", "strictpull", 0],
+    ["Muscle-Ups", "ringmu", 0], ["Bar Muscle-Ups", "barmu", 0], ["Ring Muscle-Ups", "ringmu", 0],
+    ["Toes-to-Bar", "t2b", 0], ["Knees-to-Elbows", "k2e", 0], ["Handstand Push-Ups", "hspu", 0],
+    ["Handstand Walk", "hswalk", 0], ["Wall Walks", "wallwalk", 0], ["Push-Ups", "pushup", 0],
+    ["Dips", "dip", 0], ["Ring Dips", "ringdip", 0], ["Burpees", "burpee", 0],
+    ["Bar-Facing Burpees", "barfacing", 0], ["Burpees Over the Bar", "burpeebar", 0],
+    ["Lateral Burpees Over the DB", "burpeedb", 0], ["Burpee Box Jump Overs", "bbjo", 0], ["Box Jumps", "boxjump", 0],
+    ["Box Jump Overs", "bjo", 0], ["Box Step-Ups", "stepup", 0], ["Pistols", "pistol", 0],
+    ["Air Squats", "squat", 0], ["Wall Balls", "wallball", 0], ["Sit-Ups", "situp", 0], ["GHD Sit-Ups", "ghd", 0],
+    ["Rope Climbs", "rope", 0], ["Legless Rope Climbs", "legless", 0], ["Pegboard Ascents", "pegboard", 0],
+    ["Double Unders", "du", 0], ["Single Unders", "su", 0], ["Walking Lunges", "walklunge", 0],
+    ["Lunges", "lunge", 0],
+    ["Row", "row", 0], ["BikeErg", "bike", 0], ["Bike", "bike", 0], ["Air Bike", "airbike", 0],
+    ["Assault Bike", "airbike", 0], ["Echo Bike", "airbike", 0], ["Ski", "ski", 0], ["SkiErg", "ski", 0],
+    ["Run", "run", 0], ["Swim", "swim", 0], ["Shuttle Runs", "run", 1], ["Sled Push", "sledpush", 0],
+    ["Sled Pull", "sledpull", 0],
+    ["Plank", "plank", 0], ["Hollow Hold", "hollow", 0], ["Hip Thrusts", "hipthrust", 0],
+    ["Back Extensions", "backext", 0], ["V-Ups", "vup", 0],
   ];
 
   // How Spanish boxes and judges also write them, and the usual short forms: each points at a catalogue name.
@@ -150,13 +150,14 @@
   var START = 34, GAP = 6, LEN = 84;
 
   // A lone athlete needs less floor than a team of six, and past four lanes a phone needs narrower ones.
+  // One athlete's lane is a little wider than a 2.2 m bar, so two lanes' bars never meet.
   function layout(heat, lanes) {
     var phases = (heat && heat.phases) || [], of = Math.floor(+(heat && heat.intervals) || 0);
     // An interval WOD lists its movements once per interval: one interval's are the stations, and nobody laps.
     var intervals = of > 1 && +(heat && heat.intervalSeconds) > 0;
     if (intervals && phases.length % of === 0) phases = phases.slice(0, phases.length / of);
     var size = teamOf(heat, 0).length, n = Math.max(1, phases.length), tight = lanes > 4;
-    var lane = size === 1 ? (tight ? 40 : 46) : size === 2 && !tight ? 66 : tight ? 60 : 80;
+    var lane = size === 1 ? 54 : size === 2 && !tight ? 66 : tight ? 60 : 80;
     var len = n <= 5 ? LEN : Math.max(size > 4 ? LEN : size > 2 ? 64 : 52, Math.round(LEN * 5 / n));
     var texts = phases.length ? phases : [heat && heat.wodName];
     var moves = texts.map(movementOf), format = (heat && heat.format) || "FOR_TIME";
@@ -406,14 +407,18 @@
     return [add(A, add(mul(u, a), mul(pp, h))), add(A, mul(u, c)), D - c];
   }
 
+  // `px` moves the whole body sideways (a lateral jump); `lp` and `ap` turn the knees and elbows where the default would
+  // bend them the wrong way (lying on the back, a front rack).
   function skel(P, B) {
-    var cl = Math.cos(P.l), sl = Math.sin(P.l), sd = [0, cl, sl], pel = [0, P.py, P.pz], neck = add(pel, mul(sd, B.tor));
-    var ap = P.ap || [0.5, -0.8, -0.55];
+    var px = P.px || 0, cl = Math.cos(P.l), sl = Math.sin(P.l), sd = [0, cl, sl], pel = [px, P.py, P.pz], neck = add(pel, mul(sd, B.tor));
+    var ap = P.ap || [0.5, -0.8, -0.55], lp = P.lp;
     var S = { pel: pel, neck: neck, sd: sd, nd: [0, -sl, cl], hip: [], sh: [], kn: [], an: [], el: [], wr: [], fd: [], H: [], T: [], miss: 0 };
     [1, -1].forEach(function (s, i) {
-      var hip = [s * B.hw, P.py, P.pz], sh = [s * B.sw, neck[1] - B.sd * cl, neck[2] - B.sd * sl], f = P.f[i], h = P.h[i];
-      var lg = ik(hip, [s * f[0], f[1], f[2]], B.th, B.sh, [s * 0.3, 0.5 * sl, 0.5 * cl + 0.5]);
-      var ar = ik(sh, [s * h[0], h[1], h[2]], B.ua, B.fa, [s * ap[0], ap[1], ap[2]]);
+      var hip = [px + s * B.hw, P.py, P.pz], sh = [px + s * B.sw, neck[1] - B.sd * cl, neck[2] - B.sd * sl], f = P.f[i], h = P.h[i];
+      // The knee goes to the front of the line from hip to foot, so it bends the right way lying, upside down or standing.
+      var ft = [px + s * f[0], f[1], f[2]], dl = nrm(sub(ft, hip));
+      var lg = ik(hip, ft, B.th, B.sh, lp ? [s * lp[0], lp[1], lp[2]] : [s * 0.3 * (1 - Math.abs(dl[0])), dl[2], -dl[1]]);
+      var ar = ik(sh, [px + s * h[0], h[1], h[2]], B.ua, B.fa, [s * ap[0], ap[1], ap[2]]);
       var cp = Math.cos(f[3]), sp = Math.sin(f[3]), q = B.fs;
       var rot = function (a, b) { return [0, a * cp - b * sp, a * sp + b * cp]; };
       S.hip[i] = hip; S.sh[i] = sh; S.kn[i] = lg[0]; S.an[i] = lg[1]; S.el[i] = ar[0]; S.wr[i] = ar[1];
@@ -423,6 +428,7 @@
       S.miss = Math.max(S.miss, lg[2], ar[2]);
     });
     var ha = P.l * 0.55 + P.hp;
+    S.ha = ha;
     S.hd = [0, Math.cos(ha), Math.sin(ha)];
     S.hc = add(neck, mul(S.hd, B.nk + B.hh + 0.5));
     return S;
@@ -430,6 +436,15 @@
 
   // Keys: [frame, pelvis y, pelvis z, lean, head pitch, foot x, y, z, pitch, hand x, y, z], on the base skeleton at scale 1.
   function spline(K, N) {
+    var at = curve(K, N);
+    return function (t) {
+      var v = at(t), f = [v[4], v[5], v[6], v[7]], hh = [v[8], v[9], v[10]];
+      return { py: v[0], pz: v[1], l: v[2], hp: v[3], f: [f, f], h: [hh, hh] };
+    };
+  }
+
+  // Any rows [frame, values...] through a loop of N frames: a cubic through every key.
+  function curve(K, N) {
     var n = K.length;
     var R = [[K[n - 1][0] - N].concat(K[n - 1].slice(1))].concat(K, [[K[0][0] + N].concat(K[0].slice(1))], [[K[1][0] + N].concat(K[1].slice(1))]);
     var T = [];
@@ -448,8 +463,7 @@
       var v = R[k].slice(1).map(function (_, j) {
         return (2 * s3 - 3 * s2 + 1) * R[k][j + 1] + (s3 - 2 * s2 + s) * h * T[k][j] + (-2 * s3 + 3 * s2) * R[k + 1][j + 1] + (s3 - s2) * h * T[k + 1][j];
       });
-      var f = [v[4], v[5], v[6], v[7]], hh = [v[8], v[9], v[10]];
-      return { py: v[0], pz: v[1], l: v[2], hp: v[3], f: [f, f], h: [hh, hh] };
+      return v;
     };
   }
 
@@ -493,19 +507,807 @@
     };
   }
 
+  // ---- The movement library: poses written by their parts, and the equipment each movement draws
+
+  // A pose: pelvis { py, pz, px }, lean l, head pitch hp, feet fa fb [x, y, z, pitch] (f for both), hands ha hb [x, y, z]
+  // (h for both), elbow and knee poles ap lp, and the equipment's own values g. A key leaves out what stays as it was.
+  var STAND = { py: 14.6, pz: 0, px: 0, l: 0.05, hp: 0, fa: [2.8, 2, 0, 0], fb: [2.8, 2, 0, 0], ha: [4.2, 12.5, 0.8], hb: [4.2, 12.5, 0.8], ap: [0.5, -0.8, -0.55], lp: [0, 0, 0], g: [] };
+  function poseFrom(prev, o) {
+    var p = assign({}, prev, o);
+    if (o.f) { p.fa = o.f; p.fb = o.f; }
+    if (o.h) { p.ha = o.h; p.hb = o.h; }
+    ["fa", "fb", "ha", "hb"].forEach(function (k) { if (o[k]) p[k] = o[k]; });
+    delete p.f;
+    delete p.h;
+    return p;
+  }
+  function moves(keys, N, start) {
+    var prev = start || STAND, rows = keys.map(function (k) {
+      prev = poseFrom(prev, typeof k[1] === "function" ? k[1](prev) : k[1]);
+      return [k[0], prev.py, prev.pz, prev.l, prev.hp, prev.px].concat(prev.fa, prev.fb, prev.ha, prev.hb, prev.ap, prev.lp, prev.g);
+    });
+    var at = curve(rows, N);
+    return function (t) {
+      var v = at(t), lp = v.slice(22, 25);
+      return {
+        py: v[0], pz: v[1], l: v[2], hp: v[3], px: v[4], f: [v.slice(5, 9), v.slice(9, 13)], h: [v.slice(13, 16), v.slice(16, 19)],
+        ap: v.slice(19, 22), lp: lp[0] || lp[1] || lp[2] ? lp : null, g: v.slice(25),
+      };
+    };
+  }
+  // The same keys with the two sides swapped, for the other arm's rep or the other leg's step.
+  function swapped(p) { return assign({}, p, { fa: p.fb, fb: p.fa, ha: p.hb, hb: p.ha, px: -p.px, g: p.g.length ? [1 - p.g[0]].concat(p.g.slice(1)) : p.g }); }
+  function pose(base, o) { return poseFrom(base, o || {}); }
+  // Two reps, one per side: the keys of the first, then the same keys with the sides swapped, half a loop later.
+  function bothSides(keys, half) {
+    var prev = STAND, full = keys.map(function (k) { prev = poseFrom(prev, typeof k[1] === "function" ? k[1](prev) : k[1]); return [k[0], prev]; });
+    return full.concat(full.map(function (k) { return [k[0] + half, swapped(k[1])]; }));
+  }
+  // A whole frame turned half round, for the rep done facing back the other way (over the box, over the bar).
+  function turnedAfter(fn, from) {
+    return function (t) {
+      var p = fn(t);
+      p.flip = (((t % (2 * from)) + 2 * from) % (2 * from)) >= from;
+      return p;
+    };
+  }
+
+  // Equipment in the pose's own space (scaled with the body), drawn into the same voxels.
+  function sphere(c, r, col) {
+    var w = W3(c);
+    for (var x = Math.floor(w[0] - r); x <= Math.ceil(w[0] + r); x++) for (var y = Math.floor(w[1] - r); y <= Math.ceil(w[1] + r); y++)
+      for (var z = Math.floor(w[2] - r); z <= Math.ceil(w[2] + r); z++) {
+        var dx = x + 0.5 - w[0], dy = y + 0.5 - w[1], dz = z + 0.5 - w[2];
+        if (dx * dx + dy * dy + dz * dz <= r * r) put(x, y, z, col);
+      }
+  }
+  function rod(A, B, r, col) { capsule(W3(A), W3(B), r, r, col); }
+  // A box from one corner to the other, in base units scaled by k.
+  function slab(k, x0, y0, z0, x1, y1, z1, col) {
+    for (var x = Math.round(C + x0 * k); x < Math.round(C + x1 * k); x++) for (var y = Math.max(0, Math.round(y0 * k)); y < Math.round(y1 * k); y++)
+      for (var z = Math.round(C + z0 * k); z < Math.round(C + z1 * k); z++) put(x, y, z, col);
+  }
+  function grip(S, j, gd) { return add(S.wr[j], mul(S.fd[j], 1.1 * gd.hr / 1.05)); }
+  function dumbbell(c, k) {
+    var w = W3(c).map(Math.round);
+    cylinder(w, 1.6 * k, 0.8, 4);
+    [-1, 1].forEach(function (s) { cylinder([w[0] + s * 2.4 * k, w[1], w[2]], 0.8 * k, 1.7 * k, 34); });
+  }
+  function kettlebell(S, j, gd) {
+    // Hanging from the hand, or resting on the back of the forearm when the forearm points up (a rack, a lockout).
+    var c = grip(S, j, gd), k = gd.k, up = S.fd[j][1] > 0.6, bell = add(c, up ? mul(nrm([0, 0.3, -1]), 2.4 * k) : mul(S.fd[j], 2.4 * k));
+    sphere(bell, 2.1 * k, 34);
+    rod(add(c, [-1.1 * k, 0, 0]), add(bell, [-1.1 * k, 0, 0]), 0.6, 34);
+    rod(add(c, [1.1 * k, 0, 0]), add(bell, [1.1 * k, 0, 0]), 0.6, 34);
+    rod(add(c, [-1.1 * k, 0, 0]), add(c, [1.1 * k, 0, 0]), 0.6, 34);
+  }
+  // A loaded bar in the pose's own space, for a bar held where the hands do not say (on the floor, on the hips).
+  function plates(c, gd) {
+    barAt(W3(c).map(Math.round), gd, 0);
+  }
+  // Which hand holds a one-arm load: the first value of g, 0 or 1, swapped with the sides.
+  function side(P) { return P.g && P.g[0] > 0.5 ? 1 : 0; }
+  // Which equipment a movement draws: each name is the hands' load or the station around the athlete.
+  var GEAR = {
+    db1: function (S, P, gd) { dumbbell(grip(S, side(P), gd), gd.k); },
+    db2: function (S, P, gd) { dumbbell(grip(S, 0, gd), gd.k); dumbbell(grip(S, 1, gd), gd.k); },
+    kb1: function (S, P, gd) { kettlebell(S, side(P), gd); },
+    kb2h: function (S, P, gd) {
+      var c = add(mul(add(grip(S, 0, gd), grip(S, 1, gd)), 0.5), [0, 0, 0]), d = nrm(add(S.fd[0], S.fd[1])), k = gd.k, bell = add(c, mul(d, 2.6 * k));
+      sphere(bell, 2.2 * k, 34);
+      rod(add(c, [-1.4 * k, 0, 0]), add(c, [1.4 * k, 0, 0]), 0.6, 34);
+      [-1, 1].forEach(function (s) { rod(add(c, [s * 1.4 * k, 0, 0]), add(bell, [s * 0.9 * k, 0, 0]), 0.6, 34); });
+    },
+    goblet: function (S, P, gd) {
+      var c = mul(add(grip(S, 0, gd), grip(S, 1, gd)), 0.5), k = gd.k;
+      sphere(add(c, [0, -2.2 * k, 0.6 * k]), 2.1 * k, 34);
+      rod(add(c, [-1.3 * k, 0, 0]), add(c, [1.3 * k, 0, 0]), 0.6, 34);
+    },
+    sandbag: function (S, P, gd) {
+      var c = mul(add(grip(S, 0, gd), grip(S, 1, gd)), 0.5), k = gd.k;
+      rod(add(c, [-3.2 * k, 0, 1 * k]), add(c, [3.2 * k, 0, 1 * k]), 2.4 * k, 19);
+    },
+    // A 14-inch medicine ball, light with a dark band round its middle so it reads on the dark floor.
+    ball: function (S, P, gd) {
+      var c = mul(P.g.slice(0, 3), gd.k), r = 3.4 * gd.k;
+      sphere(c, r, 22);
+      var w = W3(c);
+      for (var x = Math.floor(w[0] - r); x <= Math.ceil(w[0] + r); x++) for (var z = Math.floor(w[2] - r); z <= Math.ceil(w[2] + r); z++) {
+        var dx = x + 0.5 - w[0], dz = z + 0.5 - w[2], d = dx * dx + dz * dz;
+        if (d <= r * r && d > (r - 1.2) * (r - 1.2)) put(x, Math.floor(w[1]), z, 5);
+      }
+    },
+  };
+  // Gear that names several pieces: a list of GEAR names and station drawings, each called in turn.
+  function gearOf() {
+    var parts = Array.prototype.slice.call(arguments);
+    return function (S, P, gd) { parts.forEach(function (p) { (typeof p === "function" ? p : GEAR[p])(S, P, gd); }); };
+  }
+
   // The animation registry. Adding one is a pose function, its frame count and its team spacing; the bone test covers
   // every entry on its own. `still` is the frame shown to visitors who ask for less motion; `form` the team's place on a
   // station (abreast, spacing across, spacing along, shift that leaves room for the painted name); `bar` draws a loaded
   // barbell in the hands, `rig` a pull-up station; `prop` is the equipment left there when nobody is using it.
+  // A 2.2 m bar or a 1.1 m rig is wider than a teammate's spacing: a team on one stands in a file, one behind the other.
+  var COLUMN = [1, 0, 13, 0];
   var ANIMS = {};
   function register(id, def) { ANIMS[id] = def; }
   register("run", { N: 16, pose: run, form: [2, 18, 18, 0], prop: "cones", still: 4 });
-  register("snatch", { N: 40, pose: spline(SNATCH, 40), form: [2, 30, 26, -4], bar: 1, prop: "bar", still: 24 });
+  register("snatch", { N: 40, pose: spline(SNATCH, 40), form: COLUMN, bar: 1, prop: "bar", still: 24 });
   register("burpee", { N: 36, pose: withArms(spline(BURPEE, 36), [0.9, -0.25, -0.6]), form: [4, 15, 34, 0], still: 29 });
-  register("pullup", { N: 28, pose: spline(PULL, 28), form: [4, 17, 30, 0], rig: 1, prop: "rig", still: 14 });
+  register("pullup", { N: 28, pose: spline(PULL, 28), form: COLUMN, rig: 1, prop: "rig", still: 14 });
   register("squat", { N: 24, pose: spline(SQUAT, 24), form: [2, 28, 18, -4], still: 12 });
   register("generic", { N: 24, pose: spline(GENERIC, 24), form: [2, 28, 18, -4], still: 12 });
   register("idle", { N: 16, pose: spline(IDLE, 16), form: [2, 24, 16, 0], still: 0 });
+
+  // ---- The movement catalogue's own animations, one per movement, on the library above
+
+  // Where a pose puts the shoulders, and a point fixed to the torso from there: up the spine and out of the chest.
+  function shoulderOf(p) { return [p.py + 7.8 * Math.cos(p.l), p.pz + 7.8 * Math.sin(p.l)]; }
+  function onBody(p, up, fwd, x) {
+    var s = shoulderOf(p), c = Math.cos(p.l), n = Math.sin(p.l);
+    return [x, s[0] + up * c - fwd * n, s[1] + up * n + fwd * c];
+  }
+  // A key whose hands ride on the torso (a front rack, a back rack): they follow wherever the key puts the body.
+  function held(o, up, fwd, x, x2) {
+    return function (prev) {
+      var p = poseFrom(prev, o), out = assign({}, o);
+      if (x2 === undefined) out.h = onBody(p, up, fwd, x);
+      else { out.ha = onBody(p, up, fwd, x); out.hb = onBody(p, up, fwd, x2); }
+      return out;
+    };
+  }
+  // Hands straight above the shoulders at full reach, wherever the hips are.
+  function overhead(o, x, reach, back) {
+    return function (prev) {
+      var p = poseFrom(prev, o), s = shoulderOf(p);
+      return assign({}, o, { h: [x, s[0] + (reach || 9.8), s[1] - (back || 0.6)] });
+    };
+  }
+  // Every key moved along the floor or up: a burpee done behind a bar, a landing on a box.
+  function shifted(o, dz, dy) {
+    return function (prev) {
+      var p = typeof o === "function" ? poseFrom(prev, o(prev)) : poseFrom(STAND, o), m = function (v, n) { var r = v.slice(); r[2] += dz; if (n === 3) r[1] += dy || 0; return r; };
+      return { py: p.py + (dy || 0), pz: p.pz + dz, px: p.px, l: p.l, hp: p.hp, fa: m(p.fa, 3), fb: m(p.fb, 3), ha: m(p.ha, 3), hb: m(p.hb, 3), ap: p.ap, lp: p.lp, g: p.g };
+    };
+  }
+  var RACK_AP = [0.3, -0.3, 1], OUT_AP = [1, 0, -0.1], BACK_AP = [0.6, -1, -0.4], ROW_AP = [0.4, 0.5, -1];
+
+  // Barbell. The bar is drawn in the hands, so every key says where the hands are.
+  var FLOOR = { py: 9.5, pz: -4.5, l: 0.95, hp: 0, f: [2.7, 2, 0, 0], h: [5, 4.6, 2.6], ap: [0.5, -0.8, -0.55] };
+  var LOCKOUT = { py: 14.6, pz: 0.2, l: -0.02, hp: 0, f: [2.7, 2, 0, 0], h: [5, 12.8, 1.6] };
+  var KNEE = { py: 11, pz: -3.6, l: 0.75, h: [5, 8.6, 3.4] };
+  var EXTEND = { py: 15.2, pz: -0.3, l: -0.12, f: [3, 3.2, 0, 0.5], h: [5, 13.6, 1.8] };
+  var HANG = { py: 14.6, pz: 0, l: 0.05, f: [2.7, 2, 0, 0], h: [5, 12.6, 1.5], ap: [0.5, -0.8, -0.55] };
+  var STAND_RACK = held({ py: 14.6, pz: 0, l: 0.05, f: [2.8, 2, 0, 0], ap: RACK_AP }, -0.3, 3.8, 5);
+  function rackAt(o) { return held(assign({ ap: RACK_AP }, o), -0.3, 3.8, 5); }
+  function backAt(o) { return held(assign({ ap: BACK_AP }, o), -0.2, -2.6, 6.5); }
+
+  var DEADLIFT = moves([[0, FLOOR], [4, {}], [11, LOCKOUT], [15, {}], [23, FLOOR]], 28);
+  var SUMO_FLOOR = { py: 8.5, pz: -2.5, l: 0.75, f: [5.6, 2, 0, 0], h: [3.2, 4.6, 2.6], lp: [1, 0.2, 0.5] };
+  var SUMO = moves([[0, SUMO_FLOOR], [4, {}], [11, { py: 13.9, pz: 0.1, l: -0.02, h: [3.2, 12.6, 1.4] }], [15, {}], [23, SUMO_FLOOR]], 28);
+  var RDL_TOP = assign({}, LOCKOUT, { py: 14.4 });
+  var RDL = moves([[0, RDL_TOP], [3, {}], [11, { py: 13.6, pz: -4.8, l: 1.15, h: [5, 7.0, 2.6] }], [13, {}], [21, RDL_TOP]], 24);
+  var GOOD_MORNING = moves([[0, backAt({ py: 14.6, pz: 0, l: 0.05, f: [3, 2, 0, 0] })], [3, backAt({})], [11, backAt({ py: 14, pz: -5, l: 1.3, hp: -0.3 })], [13, backAt({})], [21, backAt({ py: 14.6, pz: 0, l: 0.05, hp: 0 })]], 24);
+  var ROW_HINGE = { py: 13, pz: -4, l: 1.15, hp: -0.25, f: [2.9, 2, 0, 0], h: [5, 6.6, 3.2], ap: [0.5, -0.8, -0.55] };
+  var BENT_ROW = moves([[0, ROW_HINGE], [3, {}], [8, held({ ap: ROW_AP }, -4.6, 3.4, 5)], [10, {}], [16, { h: [5, 6.6, 3.2], ap: [0.5, -0.8, -0.55] }]], 20);
+
+  var FRONT_SQUAT = moves([[0, STAND_RACK], [3, rackAt({})], [11, rackAt({ py: 6.8, pz: -2.8, l: 0.42, f: [3.4, 2, 0, 0] })], [13, rackAt({})], [21, rackAt({ py: 14.6, pz: 0, l: 0.05, f: [2.8, 2, 0, 0] })]], 24);
+  var BACK_SQUAT = moves([[0, backAt({ py: 14.6, pz: 0, l: 0.05, f: [3.2, 2, 0, 0] })], [3, backAt({})], [11, backAt({ py: 7.6, pz: -3.6, l: 0.68, f: [3.4, 2, 0, 0] })], [13, backAt({})], [21, backAt({ py: 14.6, pz: 0, l: 0.05, f: [3.2, 2, 0, 0] })]], 24);
+  var OHS_TOP = overhead({ py: 14.6, pz: 0, l: 0.03, f: [3.6, 2, 0, 0], ap: OUT_AP }, 6.6, 9.8, 0.6);
+  var OHS = moves([[0, OHS_TOP], [3, overhead({}, 6.6, 9.8, 0.6)], [11, overhead({ py: 6.4, pz: -2.6, l: 0.34 }, 6.6, 9.7, 0.4)], [13, overhead({}, 6.6, 9.7, 0.4)], [21, OHS_TOP]], 24);
+
+  var PRESS = moves([[0, STAND_RACK], [3, rackAt({})], [7, { h: [5, 27, 3.3], ap: [0.8, -0.3, 0.6] }], [10, { h: [5, 32.3, -0.3], ap: OUT_AP }], [13, {}], [17, { h: [5, 27, 3.3], ap: [0.8, -0.3, 0.6] }], [21, rackAt({})]], 24);
+  var PUSH_PRESS = moves([[0, STAND_RACK], [3, rackAt({})], [7, rackAt({ py: 13.2, pz: -0.8, l: 0.08 })], [10, { py: 15.2, pz: 0, l: 0.02, f: [2.8, 2.8, 0, 0.5], h: [5, 27.5, 3.3], ap: [0.8, -0.3, 0.6] }], [13, { py: 14.6, f: [2.8, 2, 0, 0], h: [5, 32.3, -0.3], ap: OUT_AP }], [17, {}], [21, rackAt({ py: 14, pz: -0.3, l: 0.06 })], [24, rackAt({ py: 14.6, pz: 0, l: 0.05 })]], 28);
+  var PUSH_JERK = moves([[0, STAND_RACK], [3, rackAt({})], [7, rackAt({ py: 13.2, pz: -0.8, l: 0.08 })], [10, { py: 15.2, pz: 0, l: 0.02, f: [2.8, 2.8, 0, 0.5], h: [5, 26, 3.3], ap: [0.8, -0.3, 0.6] }], [12, overhead({ py: 12.6, pz: -1.2, l: 0.1, f: [3.4, 2, 0, 0], ap: OUT_AP }, 5, 9.9, 0.4)], [15, {}], [19, overhead({ py: 14.6, pz: 0, l: 0.03, f: [2.8, 2, 0, 0] }, 5, 9.9, 0.4)], [22, {}], [27, rackAt({ py: 14, pz: -0.3, l: 0.06 })], [30, rackAt({ py: 14.6, pz: 0, l: 0.05 })]], 32);
+  var SPLIT_CATCH = { py: 11.4, pz: -0.4, l: 0.04, fa: [2.6, 2, 6.4, 0], fb: [2.6, 3.1, -7.6, 1], h: [5, 29.2, -0.7], ap: OUT_AP };
+  var SPLIT_JERK = moves([[0, STAND_RACK], [3, rackAt({})], [7, rackAt({ py: 13.2, pz: -0.8, l: 0.08 })], [10, { py: 15.2, pz: 0, l: 0.02, f: [2.8, 2.8, 0, 0.5], h: [5, 26, 3.3], ap: [0.8, -0.3, 0.6] }], [12, SPLIT_CATCH], [15, {}], [18, { py: 13.4, pz: 0, fa: [2.7, 2, 3.2, 0], h: [5, 31.2, -0.5] }], [21, { py: 14.6, fb: [2.7, 2, 0, 0], fa: [2.7, 2, 0, 0], h: [5, 32.3, -0.4] }], [23, {}], [28, rackAt({ py: 14, pz: -0.3, l: 0.06, f: [2.8, 2, 0, 0] })], [30, rackAt({ py: 14.6, pz: 0, l: 0.05 })]], 32);
+  var THRUSTER = moves([[0, overhead({ py: 14.6, pz: 0, l: 0.03, f: [3.2, 2, 0, 0], ap: OUT_AP }, 5, 9.9, 0.4)], [3, {}], [7, rackAt({ py: 12.8, pz: -1.2, l: 0.16 })], [11, rackAt({ py: 6.9, pz: -2.8, l: 0.42, f: [3.4, 2, 0, 0] })], [13, rackAt({})], [17, { py: 14.6, pz: 0, l: 0.04, f: [3.2, 2.4, 0, 0.3], h: [5, 26.5, 3.3], ap: [0.8, -0.3, 0.6] }], [20, overhead({ f: [3.2, 2, 0, 0], ap: OUT_AP }, 5, 9.9, 0.4)], [24, {}]], 28);
+
+  // The cleans: off the floor (or the hang), a jump, the elbows round, a catch low or high.
+  function cleanKeys(catchPy, from, n) {
+    var low = catchPy < 10, c = low ? { py: catchPy, pz: -2.8, l: 0.42, f: [3.4, 2, 0, 0] } : { py: catchPy, pz: -1.4, l: 0.18, f: [3.3, 2, 0, 0] };
+    var start = from === "hang" ? [[0, HANG], [3, {}], [7, { py: 12.8, pz: -2.4, l: 0.5, h: [5, 10.2, 3] }], [9, EXTEND]] : [[0, FLOOR], [4, {}], [9, KNEE], [12, EXTEND]];
+    var t = start[start.length - 1][0];
+    return start.concat([
+      [t + 2, { py: c.py + 3.5, pz: -1, l: 0.12, f: [3.3, 2.2, 0, 0], h: [5, 18.5, 4.2], ap: [0.6, 0.2, -0.2] }],
+      [t + 4, rackAt(c)], [t + 8, rackAt({})], [t + (low ? 14 : 11), rackAt({ py: 14.6, pz: 0, l: 0.05, f: [2.8, 2, 0, 0] })], [t + (low ? 17 : 14), rackAt({})],
+    ]).concat(n ? [] : [[t + (low ? 21 : 18), { h: [5, 12.6, 1.5], ap: [0.5, -0.8, -0.55] }]]);
+  }
+  function loopTo(keys, start, n) { return keys.concat([[n - 4, start]]); }
+  var CLEAN = moves(loopTo(cleanKeys(6.8), FLOOR, 40), 40);
+  var POWER_CLEAN = moves(loopTo(cleanKeys(12.2), FLOOR, 36), 36);
+  var HANG_CLEAN = moves(loopTo(cleanKeys(12.4, "hang"), HANG, 30), 30);
+  // Clean, stand, split jerk, recover, down: the whole lift in one loop.
+  var CLEAN_JERK = moves(cleanKeys(6.8, null, true).concat([
+    [37, rackAt({ py: 13.2, pz: -0.8, l: 0.08 })], [40, { py: 15.2, pz: 0, l: 0.02, f: [2.8, 2.8, 0, 0.5], h: [5, 26, 3.3], ap: [0.8, -0.3, 0.6] }],
+    [42, SPLIT_CATCH], [45, {}], [48, { py: 13.4, pz: 0, fa: [2.7, 2, 3.2, 0], h: [5, 31.2, -0.5] }],
+    [51, { py: 14.6, fb: [2.7, 2, 0, 0], fa: [2.7, 2, 0, 0], h: [5, 32.3, -0.4] }], [54, {}], [58, rackAt({ py: 14.2, pz: -0.2, l: 0.06 })],
+    [61, { h: [5, 12.6, 1.5], ap: [0.5, -0.8, -0.55] }], [66, FLOOR],
+  ]), 70);
+  // The snatches, from the floor or the hang, caught high: the squat snatch is the original SNATCH above.
+  var SNATCH_FLOOR = { py: 9, pz: -5, l: 1, f: [2.8, 2, 0, 0], h: [6.2, 5, 3.5], ap: [0.5, -0.8, -0.55] };
+  var SNATCH_HANG = { py: 14.6, pz: 0, l: 0.05, f: [2.8, 2, 0, 0], h: [6.2, 13.4, 3.2], ap: [0.5, -0.8, -0.55] };
+  function snatchHigh(from) {
+    var start = from === "hang" ? [[0, SNATCH_HANG], [3, {}], [7, { py: 12.8, pz: -2.4, l: 0.5, h: [6.2, 10.6, 3.4] }], [9, { py: 15.2, pz: -0.5, l: -0.1, f: [3, 3.2, 0, 0.5], h: [6, 16, 3.6] }]]
+      : [[0, SNATCH_FLOOR], [3, {}], [8, { py: 10.5, pz: -4, l: 0.8, h: [6.2, 8.5, 4.8] }], [11, { py: 15.2, pz: -0.5, l: -0.1, f: [3, 3.2, 0, 0.5], h: [6, 18, 3.8] }]];
+    var t = start[start.length - 1][0];
+    return start.concat([
+      [t + 3, overhead({ py: 11.6, pz: -1.6, l: 0.16, f: [3.6, 2, 0, 0], ap: OUT_AP }, 6.2, 9.9, 0.5)], [t + 7, overhead({}, 6.2, 9.9, 0.5)],
+      [t + 11, overhead({ py: 14.6, pz: -0.2, l: 0.03, f: [3.2, 2, 0, 0] }, 6.2, 9.9, 0.5)], [t + 14, overhead({}, 6.2, 9.9, 0.5)],
+      [t + 18, from === "hang" ? SNATCH_HANG : { py: 14.4, pz: -0.3, l: 0.05, f: [2.8, 2, 0, 0], h: [6.2, 13.4, 3.4], ap: [0.5, -0.8, -0.55] }],
+    ]).concat(from === "hang" ? [] : [[t + 22, { py: 10.5, pz: -4, l: 0.8, h: [6.2, 8.5, 4.8] }]]);
+  }
+  var POWER_SNATCH = moves(snatchHigh(), 37);
+  var HANG_SNATCH = moves(snatchHigh("hang"), 31);
+
+  // Lying on a bench: the torso flat, head back along -z, knees up and feet on the floor.
+  var BENCH_TOP = { py: 10.4, pz: 2.4, l: -1.5708, hp: -0.71, f: [3.6, 2, 8, 0], lp: [0.3, 1, 0.3], h: [5.6, 20.6, -5.6], ap: [1, -0.4, 0] };
+  var BENCH = moves([[0, BENCH_TOP], [3, {}], [10, { h: [5.6, 13.6, -4.4], ap: [1, -0.7, 0.2] }], [12, {}], [18, { h: [5.6, 20.6, -5.6], ap: [1, -0.4, 0] }]], 22);
+  function bench(S, P, gd) {
+    var k = gd.k;
+    slab(k, -2.6, 6.2, -13, 2.6, 8.2, 4, 23);
+    slab(k, -0.8, 0, -10, 0.8, 6.2, -8.4, 6);
+    slab(k, -0.8, 0, 1, 0.8, 6.2, 2.6, 6);
+    slab(k, -2.6, 0, -11, 2.6, 0.8, -7.4, 6);
+    slab(k, -2.6, 0, 0, 2.6, 0.8, 3.6, 6);
+  }
+  // Shoulders on a bench behind, the bar on the hips going up and down.
+  var THRUST_DOWN = { py: 5.2, pz: -0.6, l: -0.9, hp: -0.2, f: [3.2, 2, 7, 0], lp: [0.3, 1, 0.3], h: [6.2, 7.6, 0.4], ap: [0.6, -0.4, -0.6] };
+  var HIP_THRUST = moves([[0, THRUST_DOWN], [3, {}], [9, { py: 10.6, pz: 1.4, l: -1.5, hp: -0.4, h: [6.2, 13.2, 2.2] }], [12, {}], [18, THRUST_DOWN]], 22);
+  function thrustBench(S, P, gd) {
+    var k = gd.k;
+    slab(k, -6, 6, -10, 6, 8, -5.4, 23);
+    slab(k, -5, 0, -9.6, -3.6, 6, -8, 6);
+    slab(k, 3.6, 0, -9.6, 5, 6, -8, 6);
+  }
+
+  // Lunges on the spot: one foot forward, the back knee to the floor, back up; then the other leg.
+  function lungeKeys(hands) {
+    var down = { py: 8.6, pz: 3.2, l: 0.03, fa: [2.6, 2, 10.2, 0], fb: [2.6, 2.8, -1.8, 1.05] };
+    var up = { py: 14.6, pz: 0, l: 0.04, fa: [2.7, 2, 0, 0], fb: [2.7, 2, 0, 0] };
+    var wrap = hands || function (o) { return o; };
+    return bothSides([[0, wrap(up)], [3, wrap({})], [7, wrap({ py: 13, pz: 2, fa: [2.6, 4.4, 7, 0.1] })], [10, wrap(down)], [12, wrap({})], [17, wrap(up)]], 20);
+  }
+  var RACK_LUNGE = moves(lungeKeys(function (o) { return rackAt(o); }), 40);
+  var OH_LUNGE = moves(lungeKeys(function (o) { return overhead(assign({ ap: OUT_AP }, o), 5.8, 9.9, 0.4); }), 40);
+
+  // Dumbbells and kettlebells. A one-arm lift is two reps, one per hand: g[0] says which hand holds the load.
+  function oneOverhead(o, x, back) {
+    return function (prev) {
+      var p = poseFrom(prev, o), s = shoulderOf(p);
+      return assign({}, o, { ha: [x, s[0] + 9.9, s[1] - (back || 0.4)] });
+    };
+  }
+  function oneAt(o, up, fwd, x) {
+    return function (prev) { return assign({}, o, { ha: onBody(poseFrom(prev, o), up, fwd, x) }); };
+  }
+  var DB_FLOOR = { py: 9.4, pz: -4, l: 0.9, hp: 0, f: [3.2, 2, 0, 0], ha: [1.4, 4.6, 3.2], hb: [4.6, 10.4, 3], ap: [0.5, -0.8, -0.55], g: [0] };
+  var DB_SNATCH = moves(bothSides([
+    [0, DB_FLOOR], [3, {}], [7, { py: 15.2, pz: -0.4, l: -0.1, f: [3.2, 3.2, 0, 0.5], ha: [2.2, 15.5, 3.6], hb: [5, 13, -1] }],
+    [10, oneOverhead({ py: 13.4, pz: -0.8, l: 0.08, f: [3.2, 2, 0, 0], hb: [5, 11.5, 1], ap: OUT_AP }, 3.6)], [14, oneOverhead({ py: 14.6, pz: 0, l: 0.04 }, 3.6)],
+    [17, oneOverhead({}, 3.6)], [21, oneAt({ ap: RACK_AP }, -0.8, 3, 4)], [25, assign({}, DB_FLOOR)], [27, {}],
+  ], 28), 56);
+  var DB_CLEAN = moves(bothSides([
+    [0, DB_FLOOR], [3, {}], [7, { py: 15.2, pz: -0.4, l: -0.1, f: [3.2, 3.2, 0, 0.5], ha: [2.4, 14.5, 3.4], hb: [5, 13, -1] }],
+    [10, oneAt({ py: 12.6, pz: -1, l: 0.12, f: [3.2, 2, 0, 0], hb: [5, 11.5, 1], ap: RACK_AP }, -0.8, 3, 4)], [14, oneAt({ py: 14.6, pz: 0, l: 0.04 }, -0.8, 3, 4)],
+    [17, oneAt({}, -0.8, 3, 4)], [21, { ha: [4.4, 12.4, 1.4], ap: [0.5, -0.8, -0.55] }], [25, assign({}, DB_FLOOR)], [27, {}],
+  ], 28), 56);
+  var DB_CLEAN_JERK = moves(bothSides([
+    [0, DB_FLOOR], [3, {}], [7, { py: 15.2, pz: -0.4, l: -0.1, f: [3.2, 3.2, 0, 0.5], ha: [2.4, 14.5, 3.4], hb: [5, 13, -1] }],
+    [10, oneAt({ py: 12.6, pz: -1, l: 0.12, f: [3.2, 2, 0, 0], hb: [5, 11.5, 1], ap: RACK_AP }, -0.8, 3, 4)], [14, oneAt({ py: 14.6, pz: 0, l: 0.04 }, -0.8, 3, 4)],
+    [17, oneAt({ py: 13.2, pz: -0.7, l: 0.08 }, -0.8, 3, 4)], [19, oneAt({ py: 15.2, pz: 0, f: [3.2, 2.8, 0, 0.5] }, 1.8, 3.6, 4)],
+    [21, oneOverhead({ py: 12.8, pz: -1, l: 0.1, f: [3.4, 2, 0, 0], ap: OUT_AP }, 3.6)], [24, oneOverhead({ py: 14.6, pz: 0, l: 0.04 }, 3.6)], [27, oneOverhead({}, 3.6)],
+    [31, oneAt({ ap: RACK_AP }, -0.8, 3, 4)], [35, assign({}, DB_FLOOR)], [37, {}],
+  ], 38), 76);
+  function dbRack(o) { return held(assign({ ap: RACK_AP }, o), -0.9, 2.6, 5.4); }
+  var DB_THRUSTER = moves([[0, overhead({ py: 14.6, pz: 0, l: 0.03, f: [3.2, 2, 0, 0], ap: OUT_AP }, 5.6, 9.9, 0.3)], [3, {}], [7, dbRack({ py: 12.8, pz: -1.2, l: 0.16 })], [11, dbRack({ py: 6.9, pz: -2.8, l: 0.42, f: [3.4, 2, 0, 0] })], [13, dbRack({})], [17, { py: 14.6, pz: 0, l: 0.04, f: [3.2, 2.4, 0, 0.3], h: [5.6, 26.5, 2.6], ap: [0.8, -0.3, 0.6] }], [20, overhead({ f: [3.2, 2, 0, 0], ap: OUT_AP }, 5.6, 9.9, 0.3)], [24, {}]], 28);
+  var DB_PUSH_PRESS = moves([[0, dbRack({ py: 14.6, pz: 0, l: 0.05, f: [2.8, 2, 0, 0] })], [3, dbRack({})], [7, dbRack({ py: 13.2, pz: -0.8, l: 0.08 })], [10, { py: 15.2, pz: 0, l: 0.02, f: [2.8, 2.8, 0, 0.5], h: [5.6, 27, 2.6], ap: [0.8, -0.3, 0.6] }], [13, overhead({ py: 14.6, f: [2.8, 2, 0, 0], ap: OUT_AP }, 5.6, 9.9, 0.3)], [17, {}], [21, dbRack({ py: 14, pz: -0.3, l: 0.06 })], [24, dbRack({ py: 14.6, pz: 0, l: 0.05 })]], 28);
+  var DB_ROW_HINGE = { py: 12.8, pz: -3.8, l: 1.1, hp: -0.25, f: [3.2, 2, 0, 0], ha: [3.8, 5.4, 3], hb: [3.4, 10, 2.2], ap: [0.5, -0.8, -0.55], g: [0] };
+  var DB_ROW = moves(bothSides([[0, DB_ROW_HINGE], [3, {}], [7, { ha: [4, 11.6, -1.6], ap: ROW_AP }], [9, {}], [13, { ha: [3.8, 5.4, 3], ap: [0.5, -0.8, -0.55] }], [15, {}]], 16), 32);
+  var RENEGADE_PLANK = { py: 11, pz: -6, l: 1.33, hp: 0.3, f: [3.2, 2.6, -16, 1.3], h: [4.6, 3.4, 1.8], ap: [0.6, -0.5, -0.6] };
+  var RENEGADE = moves(bothSides([[0, RENEGADE_PLANK], [2, {}], [6, { ha: [4.8, 9.2, -2], ap: ROW_AP }], [8, {}], [12, { ha: [4.6, 3.4, 1.8], ap: [0.6, -0.5, -0.6] }], [13, {}]], 14), 28);
+  var DEVIL_PRESS = moves([
+    [0, { py: 14.6, pz: 0, l: 0.05, hp: 0, f: [3.2, 2, 0, 0], h: [5.2, 12.2, 0.8], ap: [0.5, -0.8, -0.55] }], [3, {}],
+    [6, { py: 10, pz: -4.2, l: 0.95, h: [4.6, 3.6, 2.5] }],
+    [9, { py: 11, pz: -5.3, l: 1.33, hp: 0.3, f: [3.4, 2.6, -15.3, 1.3] }], [12, { py: 5.2, pz: -5.8, l: 1.47, ap: [0.6, 0.2, -1] }],
+    [15, { py: 11, pz: -5.3, l: 1.33, ap: [0.5, -0.8, -0.55] }], [18, { py: 9.6, pz: -4.2, l: 0.95, hp: 0, f: [3.4, 2, 0, 0] }], [20, {}],
+    [23, { py: 11, pz: -4.6, l: 1.1, h: [4, 7.5, -1.2] }], [26, { py: 15.2, pz: -0.4, l: -0.1, f: [3.2, 3, 0, 0.5], h: [4.8, 17, 5] }],
+    [29, overhead({ py: 13.6, pz: -0.6, l: 0.06, f: [3.4, 2, 0, 0], ap: OUT_AP }, 5.4, 9.9, 0.3)], [32, overhead({ py: 14.6, pz: 0, l: 0.04 }, 5.4, 9.9, 0.3)], [35, overhead({}, 5.4, 9.9, 0.3)],
+    [39, dbRack({ ap: RACK_AP })], [43, { h: [5.2, 12.2, 0.8], ap: [0.5, -0.8, -0.55] }],
+  ], 48);
+  function gobletAt(o) { return held(assign({ ap: [0.3, -1, 0.3] }, o), -3.4, 3.6, 1.6); }
+  var GOBLET = moves([[0, gobletAt({ py: 14.6, pz: 0, l: 0.05, f: [3.6, 2, 0, 0] })], [3, gobletAt({})], [11, gobletAt({ py: 7, pz: -2.8, l: 0.42 })], [13, gobletAt({})], [21, gobletAt({ py: 14.6, pz: 0, l: 0.05 })]], 24);
+  var SWING_BACK = { py: 12.6, pz: -4.6, l: 1.15, hp: -0.2, f: [3.6, 2, 0, 0], h: [1.1, 6.8, -3], ap: [0.5, -0.8, -0.55] };
+  var KB_SWING = moves([[0, SWING_BACK], [4, { py: 14.6, pz: 0.3, l: -0.05, hp: 0, h: [1.1, 19, 9.8] }], [7, { h: [1.1, 32.4, 0.8], hp: 0.15 }], [8, {}], [11, { h: [1.1, 19, 9.8], hp: 0 }], [13, SWING_BACK]], 16);
+  var KB_BACK = { py: 12.6, pz: -4.6, l: 1.15, hp: -0.2, f: [3.6, 2, 0, 0], ha: [1.6, 6.8, -3], hb: [5.6, 11, 0.5], ap: [0.5, -0.8, -0.55], g: [0] };
+  var KB_SNATCH = moves(bothSides([[0, KB_BACK], [4, { py: 14.6, pz: 0.3, l: -0.05, hp: 0, ha: [2.6, 18, 7.5] }], [7, oneOverhead({ py: 14.4, pz: 0, l: 0.03, ap: OUT_AP }, 3.4)], [10, oneOverhead({}, 3.4)], [13, { ha: [2.6, 18, 7.5], ap: [0.5, -0.8, -0.55] }], [16, KB_BACK], [17, {}]], 18), 36);
+  var KB_CLEAN = moves(bothSides([[0, KB_BACK], [4, { py: 14.6, pz: 0.3, l: -0.05, hp: 0, ha: [2.4, 14, 5] }], [7, oneAt({ py: 14.4, pz: 0, l: 0.03, ap: RACK_AP }, -1.4, 2.6, 2.6)], [10, oneAt({}, -1.4, 2.6, 2.6)], [13, { ha: [2.4, 14, 5], ap: [0.5, -0.8, -0.55] }], [16, KB_BACK], [17, {}]], 18), 36);
+  // Lying with the bell straight up, then to the elbow, the hand, a bridge, a kneel and standing; and the same way back.
+  var TGU_KEYS = [
+    [0, oneOverhead({ py: 3.8, pz: 0, l: -1.5708, hp: -0.71, fa: [3, 2, 6, 0], fb: [3.4, 2, 12.2, -1.2], hb: [6.6, 1, -2.4], ap: [0.6, -0.6, 0.2], g: [0] }, 4.4, 0)],
+    [6, oneOverhead({ py: 3.6, l: -0.95, hp: -0.4, hb: [6.4, 1, -4.6] }, 4.4, 0)],
+    [11, oneOverhead({ py: 3.6, pz: 0.4, l: -0.35, hp: -0.1, hb: [6.4, 1, -6] }, 4.4, 0)],
+    [16, oneOverhead({ py: 7.4, pz: 2, l: -1, hb: [6.4, 1, -5.6] }, 4.4, 0)],
+    [22, oneOverhead({ py: 9.6, pz: -0.4, l: -0.15, hp: 0, fb: [2.6, 2.6, -7.2, 1.1], hb: [5.8, 8, -2.6] }, 4.4, 0.2)],
+    [26, oneOverhead({ py: 9.8, pz: 0, l: 0.02, hb: [5.4, 11, 0.6] }, 4.4, 0.2)],
+    [31, oneOverhead({ py: 14.6, pz: 0, fa: [2.8, 2, 0, 0], fb: [2.8, 2, 0, 0], hb: [5.2, 12.4, 0.6] }, 4.4, 0.2)],
+  ];
+  var TGU = moves(TGU_KEYS.concat(TGU_KEYS.slice(1, -1).reverse().map(function (k) { return [70 - k[0] - 4, k[1]]; })), 70);
+  // Walking on the spot: a heel strike, the other foot through, a little bob; the hands say what is carried.
+  function walk(hands) {
+    return function (t) {
+      var ph = ((t / 16) % 1 + 1) % 1, py = 14.3 + 0.3 * Math.cos(4 * Math.PI * ph);
+      var f = [0, 1].map(function (i) {
+        var u = (ph + i * 0.5) % 1;
+        if (u < 0.55) { var s = u / 0.55; return [2.7, 2, 3.4 - 6.8 * s, s > 0.8 ? (s - 0.8) * 2 : 0]; }
+        var w = (u - 0.55) / 0.45, e = w * w * (3 - 2 * w);
+        return [2.7, 2 + 2.2 * Math.sin(Math.PI * w), -3.4 + 6.8 * e, 0.4 - 0.6 * w];
+      });
+      return { py: py, pz: 0, l: 0.06, hp: 0, f: f, h: hands(ph), ap: [0.6, -0.8, -0.3] };
+    };
+  }
+  var FARMERS = walk(function (ph) { var s = 0.25 * Math.sin(2 * Math.PI * ph); return [[5.2, 12.4, 0.6 + s], [5.2, 12.4, 0.6 - s]]; });
+  function bagAt(o) { return held(assign({ ap: [0.6, -1, 0.2] }, o), -3.8, 4.4, 2.6); }
+  var SANDBAG = moves([
+    [0, { py: 8, pz: -3.4, l: 0.75, hp: 0, f: [3.6, 2, 0, 0], h: [2.6, 2.6, 4.2], ap: [0.6, -0.8, -0.2] }], [3, {}],
+    [8, { py: 8.6, pz: -4, l: 0.25, h: [2.6, 9.8, 3.8] }], [10, {}], [13, { py: 15.2, pz: -0.4, l: -0.1, f: [3.4, 3, 0, 0.5], h: [2.6, 16.5, 4.4] }],
+    [16, bagAt({ py: 14.6, pz: 0, l: 0.04, f: [3.4, 2, 0, 0] })], [20, bagAt({})], [24, { py: 12, pz: -2, l: 0.4, h: [2.6, 10, 4.6], ap: [0.6, -0.8, -0.2] }],
+    [28, { py: 8, pz: -3.4, l: 0.75, h: [2.6, 2.6, 4.2] }],
+  ], 32);
+
+  // Gymnastics on the bar, the rings, the floor and the wall.
+  var BAR_HANDS = [5.6, 34, 0];
+  var ARCH = { py: 15.6, pz: 0.6, l: -0.12, hp: 0.1, f: [2, 4.6, -4.4, 1], h: BAR_HANDS, ap: [0.5, -0.8, -0.55] };
+  var HOLLOW = { py: 16.2, pz: -0.6, l: 0.1, hp: 0, f: [2, 4.4, 3.2, 0.3] };
+  var STRICT_HANG = { py: 15.8, pz: 0, l: 0, hp: 0, f: [1.8, 3.4, 0.6, 0.7], h: BAR_HANDS, ap: [0.5, -0.8, -0.55] };
+  var STRICT_PULL = moves([[0, STRICT_HANG], [4, {}], [14, { py: 26.4, pz: 0.4, l: -0.05, hp: 0.3, f: [1.8, 14, 1, 0.7] }], [18, {}], [28, STRICT_HANG]], 32);
+  var C2B = moves([[0, ARCH], [4, HOLLOW], [8, { py: 27.6, pz: 0.8, l: -0.28, hp: 0.2, f: [2, 16.4, 4, 0.5] }], [11, {}], [15, { py: 17, pz: -0.4, l: 0.05, hp: 0, f: [2, 4.8, 3, 0.3] }], [20, ARCH]], 24);
+  var T2B = moves([[0, ARCH], [4, HOLLOW], [9, { py: 19.2, pz: 4.4, l: -0.6, hp: 0.3, f: [2, 33, 2.4, -0.8] }], [12, {}], [16, HOLLOW], [20, ARCH]], 24);
+  var K2E = moves([[0, ARCH], [4, HOLLOW], [9, { py: 19.2, pz: 4.4, l: -0.6, hp: 0.3, f: [2, 20.5, 10.5, 0] }], [12, {}], [16, HOLLOW], [20, ARCH]], 24);
+  var SUPPORT_AP = [0.4, 0.3, -1];
+  var BAR_MU = moves([[0, ARCH], [4, HOLLOW], [9, { py: 28, pz: -1.6, l: -0.55, hp: 0.2, f: [2, 22, 8, 0.3] }], [12, { py: 33, pz: 1.2, l: 0.9, hp: 0.2, f: [2, 22, -4, 1], ap: SUPPORT_AP }],
+    [15, { py: 36, pz: 0.8, l: 0.25, hp: 0, f: [2, 23.6, -1.5, 0.8] }], [19, {}], [23, { py: 30, pz: 0, l: 0.3, f: [2, 19, -2, 0.8] }], [27, { py: 16.2, pz: -0.6, l: 0.1, f: [2, 4.4, 3.2, 0.3], ap: [0.5, -0.8, -0.55] }]], 32);
+  var RING_HANG = { py: 15.8, pz: 0, l: 0.02, hp: 0, f: [1.8, 3.4, 0.6, 0.7], h: [5.4, 34, 0], ap: [0.5, -0.8, -0.55] };
+  var RING_SUPPORT = { py: 35.6, pz: -0.6, l: 0.15, hp: 0, f: [1.8, 23.4, -1.4, 0.8], h: [5.4, 33.4, 0.4], ap: SUPPORT_AP };
+  var RING_MU = moves([[0, RING_HANG], [3, {}], [8, { py: 25.5, pz: 0.4, l: -0.1, hp: 0.2, f: [1.8, 13, 1.2, 0.7], h: [4.8, 33.6, 1.4], ap: [0.6, -0.5, -0.4] }],
+    [12, { py: 28, pz: -1, l: 0.5, f: [1.8, 16, -3, 1], h: [4.8, 33.4, 2.6], ap: SUPPORT_AP }], [16, { py: 27.4, pz: -1.2, l: 0.42 }], [20, RING_SUPPORT], [24, {}],
+    [28, { py: 27.4, pz: -1.2, l: 0.42, f: [1.8, 16, -3, 1] }], [32, assign({}, RING_HANG, { py: 17 })]], 36);
+  var RING_DIP = moves([[0, RING_SUPPORT], [3, {}], [10, { py: 28, pz: -1.6, l: 0.45, f: [1.8, 17, -5, 1] }], [12, {}], [20, RING_SUPPORT]], 24);
+  var DIP_TOP = { py: 29.2, pz: -0.6, l: 0.12, hp: 0, f: [1.8, 20, -5, 1.1], h: [5.6, 27, 0.6], ap: SUPPORT_AP };
+  var DIP = moves([[0, DIP_TOP], [3, {}], [10, { py: 21.8, pz: -1.6, l: 0.45, f: [1.8, 13, -8, 1.1] }], [12, {}], [20, DIP_TOP]], 24);
+  function rings(S, P, gd) {
+    var k = gd.k;
+    [0, 1].forEach(function (j) {
+      var c = add(grip(S, j, gd), [0, 1.8 * k, 0]), x = (j ? -1 : 1) * 5.8 * k, prev = null;
+      for (var i = 0; i <= 12; i++) {
+        var a = (i / 12) * 2 * Math.PI, p = add(c, [0, 2.2 * k * Math.cos(a), 2.2 * k * Math.sin(a)]);
+        if (prev) rod(prev, p, 0.7, 21);
+        prev = p;
+      }
+      rod(add(c, [0, 2.2 * k, 0]), [x, 54 * k, 0], 0.6, 5);
+    });
+  }
+  function parallelBars(S, P, gd) {
+    var k = gd.k, y = 26.2 * k;
+    [-1, 1].forEach(function (s) {
+      rod([s * 5.8 * k, y, -9 * k], [s * 5.8 * k, y, 9 * k], 1, 4);
+      [-8, 8].forEach(function (z) { rod([s * 5.8 * k, 0, z * k], [s * 5.8 * k, y, z * k], 0.8, 1); });
+    });
+  }
+
+  // Upside down: the lean is half a turn, the head pitched with it, and the athlete faces -z; the wall is behind.
+  var HS_TOP = { py: 19, pz: 0.6, l: Math.PI, hp: 1.41, f: [2, 31.6, 3, -1.57], h: [4.9, 0.75, 1], ap: OUT_AP };
+  var HSPU = moves([[0, HS_TOP], [3, {}], [10, { py: 15.2, f: [2, 27.8, 3, -1.57] }], [12, {}], [19, HS_TOP]], 24);
+  // Turned half round for good: an athlete upside down faces -z, and the camera sees the front this way.
+  function facing(fn) { return function (t) { var p = fn(t); p.flip = !p.flip; return p; }; }
+  function wall(z0, z1) { return function (S, P, gd) { slab(gd.k, -9, 0, z0, 9, 44, z1, 23); }; }
+  function handWalk(t) {
+    var ph = ((t / 16) % 1 + 1) % 1, sway = 0.5 * Math.sin(2 * Math.PI * ph);
+    var h = [0, 1].map(function (i) {
+      var u = (ph + i * 0.5) % 1;
+      if (u < 0.55) return [4.6, 0.75, -2.6 + 5.2 * (u / 0.55)];
+      var w = (u - 0.55) / 0.45;
+      return [4.6, 0.75 + 3 * Math.sin(Math.PI * w), 2.6 - 5.2 * w];
+    });
+    return { py: 18.8, pz: 0, px: sway, l: Math.PI - 0.08, hp: 1.41, f: [[2.2, 30.6, -3.2, -1.3], [2.2, 30.2, -1.4, -1.5]], h: h, ap: OUT_AP };
+  }
+  var WW = [
+    [0, { py: 2.4, pz: 0, l: 1.5708, hp: 0.71, f: [2.6, 2.6, -12.6, 1.3], h: [5, 0.75, 8], ap: [0.6, 0.2, -1] }],
+    [7, { py: 9.6, pz: -2, l: 1.33, hp: 0.45, f: [2.6, 2.6, -12, 1.3], h: [5, 0.75, 5.6], ap: OUT_AP }],
+    [14, { py: 13.6, pz: -5, l: 1.9, hp: 0.9, f: [2.6, 14, -11.4, 0] }],
+    [21, { py: 16.8, pz: -6.5, l: 2.4, hp: 1.2, f: [2.6, 24, -11.2, -0.6], h: [5, 0.75, -1.2] }],
+    [28, { py: 19, pz: -9.6, l: Math.PI - 0.08, hp: 1.41, f: [2.4, 31.4, -10.6, -1.57], h: [5, 0.75, -9.2] }],
+  ];
+  var WALL_WALK = moves(WW.concat([[32, WW[4][1]]], WW.slice(1, 4).reverse().map(function (k) { return [64 - k[0] + 4, k[1]]; }), [[64, WW[0][1]]]).filter(function (k) { return k[0] < 68; }), 68);
+  var PUSH_TOP = { py: 9.7, pz: -4, l: 1.4, hp: 0.43, f: [2.6, 2.6, -14.9, 1.3], h: [5, 0.75, 3.9], ap: [0.6, -0.4, -0.6] };
+  var PUSH_UP = moves([[0, PUSH_TOP], [3, {}], [9, { py: 4.6, pz: -2.4, l: 1.52, ap: [0.6, 0.3, -1] }], [11, {}], [17, PUSH_TOP]], 20);
+
+  // Climbing: three strokes up the rope (or the pegboard), then down hand under hand.
+  function climb(legless, peg) {
+    var keys = [], t = 0, b = 15, hx = peg ? 3.6 : 0.8, hz = peg ? 2.8 : 3, d = 3.6;
+    function legs(py, bent) { return legless ? [1.2, py - 12.4, 2.6, 0.7] : bent ? [0.9, bent, 3.6, 0.4] : [0.9, py - 12.2, 3, 0.6]; }
+    for (var s = 0; s < 6; s++) {
+      var lo = s % 2 ? "hb" : "ha", hi = s % 2 ? "ha" : "hb", k0 = { py: b, pz: 0, l: 0.04, hp: 0.25, f: legs(b) }, k1 = { py: b + 0.8, f: legs(b + 0.8, b - 8.6) }, k2 = { py: b + d, f: legs(b + d) };
+      k0[lo] = [hx, b + 14.6, hz]; k0[hi] = [hx, b + 18.2, hz];
+      k1[lo] = [hx, b + 20, hz + 0.6];
+      k2[lo] = [hx, b + d + 18.2, hz];
+      keys.push([t, k0], [t + 3, k1], [t + 6, k2]);
+      t += 7;
+      b += d;
+    }
+    keys[0][1].lp = legless ? [0, 0, 0] : [0.3, 0.4, 1];
+    keys.push([t + 3, {}], [t + 20, { py: 15, f: legs(15), ha: [hx, 29.6, hz], hb: [hx, 33.2, hz] }]);
+    return { keys: keys, N: t + 24 };
+  }
+  var ROPE_C = climb(), LEGLESS_C = climb(true), PEG_C = climb(true, true);
+  var ROPE_CLIMB = moves(ROPE_C.keys, ROPE_C.N), LEGLESS = moves(LEGLESS_C.keys, LEGLESS_C.N), PEGBOARD = moves(PEG_C.keys, PEG_C.N);
+  function rope(S, P, gd) { var k = gd.k; rod([0, 0, 3 * k], [0, 78 * k, 3 * k], 0.9, 21); }
+  function pegboard(S, P, gd) {
+    var k = gd.k;
+    slab(k, -6, 20, 4.2, 6, 78, 5.4, 21);
+    for (var y = 24; y < 76; y += 6) [-3.6, 3.6].forEach(function (x) { slab(k, x - 0.5, y, 4, x + 0.5, y + 1, 4.3, 5); });
+    [0, 1].forEach(function (j) { var c = grip(S, j, gd); rod(c, [c[0], c[1], 4.2 * k], 0.6, 19); });
+  }
+
+  // The burpee's own keys, as poses, for the variants that add a jump over something.
+  function fromRows(rows, ap) {
+    return rows.map(function (r) { return [r[0], { py: r[1], pz: r[2], l: r[3], hp: r[4], f: [r[5], r[6], r[7], r[8]], h: [r[9], r[10], r[11]], ap: ap }]; });
+  }
+  var BURPEE_DOWN = fromRows(BURPEE, [0.9, -0.25, -0.6]).filter(function (k) { return k[0] <= 25; });
+  function burpeeThen(dz, jump) {
+    return BURPEE_DOWN.map(function (k) { return [k[0], shifted(k[1], dz)]; }).concat(jump);
+  }
+  var CROUCH = { py: 11.5, l: 0.4, hp: 0, f: [2.8, 2, 0, 0], h: [4.6, 10, -3], ap: [0.5, -0.8, -0.55] };
+  function broadJump(from, to, n0, up) {
+    var dy = up || 0;
+    return [
+      [n0, shifted(CROUCH, from)], [n0 + 3, shifted({ py: 19.4, pz: 0, l: 0.1, f: [2.6, 6.6, 0.8, 0.6], h: [4.4, 23, 5] }, (from + to) / 2, dy / 2 + 2)],
+      [n0 + 6, shifted({ py: 11.5, pz: -0.8, l: 0.35, f: [2.8, 2, 0, 0], h: [4.6, 11, 5] }, to, dy)], [n0 + 10, shifted(STAND, to, dy)],
+    ];
+  }
+  var BAR_FACING = turnedAfter(moves(burpeeThen(-11, broadJump(-11, 11, 28)).concat([[42, shifted(STAND, 11)]]), 44), 44);
+  // Over the bar sideways: the burpee beside it, a jump across, and the next rep on the other side.
+  function lateral(px) { return function (o) { return function (prev) { var p = typeof o === "function" ? o(prev) : o; return assign({}, p, { px: px }); }; }; }
+  function sideJump(n0) {
+    return [
+      [n0, { py: 11.5, pz: 0, px: -7.5, l: 0.3, f: [2.8, 2, 0, 0], h: [4.6, 11, -1], ap: [0.5, -0.8, -0.55] }], [n0 + 3, { py: 20, px: 0, l: 0.05, f: [2.6, 7.4, 0, 0.6], h: [4.4, 24, 2] }],
+      [n0 + 6, { py: 11.5, px: 7.5, l: 0.3, f: [2.8, 2, 0, 0], h: [4.6, 11, 2] }], [n0 + 10, assign({}, STAND, { px: 7.5 })],
+    ];
+  }
+  var OVER_LATERAL = bothSides(BURPEE_DOWN.map(function (k) { return [k[0], lateral(-7.5)(k[1])]; }).concat(sideJump(28), [[43, assign({}, STAND, { px: 7.5 })]]), 44);
+  var BURPEE_OVER = moves(OVER_LATERAL, 88);
+  function floorBarAlong(S, P, gd) { barAt(W3([0, gd.pl, 0]).map(Math.round), gd, 2); }
+  function disc(c, r, col) {
+    var w = W3(c);
+    for (var x = Math.floor(w[0] - r); x <= Math.ceil(w[0] + r); x++) for (var y = Math.floor(w[1] - r); y <= Math.ceil(w[1] + r); y++) {
+      var dx = x + 0.5 - w[0], dy = y + 0.5 - w[1];
+      if (dx * dx + dy * dy <= r * r) { put(x, y, Math.floor(w[2]), col); put(x, y, Math.floor(w[2]) + 1, col); }
+    }
+  }
+  function floorBarAcross(S, P, gd) { plates([0, gd.pl, 0], gd); }
+  function floorDb(S, P, gd) {
+    var k = gd.k;
+    rod([0, 1.7 * k, -1.6 * k], [0, 1.7 * k, 1.6 * k], 0.8, 4);
+    [-1, 1].forEach(function (s) { rod([0, 1.7 * k, s * 2 * k], [0, 1.7 * k, s * 3 * k], 1.7 * k, 34); });
+  }
+  // Onto a box and off the other side; the next rep faces back the other way.
+  function plyoBox(h) { return function (S, P, gd) { slab(gd.k, -7, 0, -5, 7, h, 5, 21); slab(gd.k, -7, h - 0.6, -5, 7, h, 5, 4); }; }
+  function boxOver(n0, from) {
+    return [
+      [n0, shifted(CROUCH, from)], [n0 + 3, shifted({ py: 22, l: 0.1, f: [2.6, 13.8, -2, 0.5], h: [4.4, 24, 5] }, from / 2)],
+      [n0 + 6, shifted({ py: 20.4, pz: -0.8, l: 0.4, f: [2.8, 14, 0, 0], h: [4.6, 22.5, 5] }, 0)], [n0 + 9, shifted(STAND, 0, 12)],
+      [n0 + 12, shifted({ py: 27.6, l: 0.05, f: [2.6, 16, 2, 0.5], h: [4.4, 26, 3] }, 4)],
+      [n0 + 16, shifted({ py: 11.5, pz: -0.8, l: 0.35, f: [2.8, 2, 0, 0], h: [4.6, 11, 5] }, -from)], [n0 + 20, shifted(STAND, -from)],
+    ];
+  }
+  var BBJO = turnedAfter(moves(burpeeThen(-15, boxOver(28, -15)).concat([[50, shifted(STAND, 15)]]), 52), 52);
+  var BJO = turnedAfter(moves([[0, shifted(STAND, -10)], [3, shifted(STAND, -10)]].concat(boxOver(5, -10)), 28), 28);
+  var BOX_JUMP = moves([[0, shifted(STAND, -9)], [3, shifted(STAND, -9)], [6, shifted(CROUCH, -9)], [9, shifted({ py: 22, l: 0.1, f: [2.6, 13.8, -2, 0.5], h: [4.4, 24, 5] }, -4.5)],
+    [12, shifted({ py: 20.4, pz: -0.8, l: 0.4, f: [2.8, 14, 0, 0], h: [4.6, 22.5, 5] }, 0)], [16, shifted(STAND, 0, 12)], [20, shifted(STAND, 0, 12)],
+    [24, shifted({ py: 21, fa: [2.8, 14, 0, 0], fb: [2.7, 9, -5, 0.4], h: [4.2, 19, 0.8] }, 0)], [27, shifted({ py: 15, pz: -6.5, fb: [2.7, 2, -9, 0], fa: [2.7, 14, -1, 0], h: [4.2, 13, -5.8] }, 0)], [31, shifted(STAND, -9)]], 36);
+  function armsDown(o) { return held(o, -9.6, 0.9, 4.4); }
+  var STEP_KEYS = [[0, shifted(STAND, -8)], [3, {}], [7, armsDown({ fa: [2.6, 12, -1.4, 0], py: 15.2, pz: -6.6, l: 0.25 })], [11, armsDown({ py: 24.4, pz: -1.2, l: 0.06, fb: [2.6, 12, -1, 0] })],
+    [14, armsDown({})], [18, armsDown({ py: 14.6, pz: -6.4, l: 0.12, fb: [2.6, 2, -8, 0] })], [22, shifted(STAND, -8)], [23, {}]];
+  var STEP_UP = moves(bothSides(STEP_KEYS, 24), 48);
+  function dbSides(o) { return function (prev) { var p = typeof o === "function" ? o(prev) : o; return assign({}, p, { h: [5.2, (p.py || prev.py) - 2.2, (p.pz !== undefined ? p.pz : prev.pz) + 0.6], ap: [0.6, -0.8, -0.3] }); }; }
+  var STEP_OVER = turnedAfter(moves([[0, dbSides(shifted(STAND, -9))], [3, dbSides({})], [7, dbSides({ fa: [2.6, 12, -1.6, 0], py: 15.2, pz: -7.4, l: 0.25 })],
+    [11, dbSides({ py: 24.4, pz: -1, l: 0.06, fb: [2.6, 12, -1, 0] })], [14, dbSides({ fa: [2.6, 13, 3, 0.2] })], [18, dbSides({ py: 15.5, pz: 4, l: 0.08, fa: [2.6, 2, 8.6, 0] })],
+    [22, dbSides(shifted(STAND, 9))], [27, dbSides({})]], 28), 28);
+
+  // Bodyweight on the floor: wall balls, pistols, lunges, sit-ups, the core holds and the jump rope.
+  function ballAt(o, up, fwd) {
+    return function (prev) {
+      var p = poseFrom(prev, o), c = onBody(p, up, fwd, 0);
+      return assign({}, o, { h: [3.6, c[1] - 0.8, c[2] - 0.2], g: [0, c[1], c[2] + 1.4], ap: [0.6, -0.8, 0.2] });
+    };
+  }
+  var WALL_BALL = moves([
+    [0, ballAt({ py: 7.6, pz: -3.2, l: 0.5, hp: 0.15, f: [3.6, 2, 0, 0] }, -3.4, 5.2)], [2, ballAt({}, -3.4, 5.2)],
+    [7, { py: 15.2, pz: 0, l: 0, hp: 0.3, f: [3.4, 3, 0, 0.5], h: [3.6, 28, 4.4], g: [0, 29.4, 6.4], ap: [0.6, -0.4, 0.6] }],
+    [9, { py: 14.6, f: [3.4, 2, 0, 0], h: [3.6, 31.4, 5], g: [0, 37.4, 8] }], [14, { h: [3.6, 27, 5.2], g: [0, 57, 9.6] }],
+    [18, { g: [0, 40, 7.6] }], [20, { h: [3.6, 27, 5], g: [0, 28.4, 6.8] }],
+    [23, ballAt({ py: 12.4, pz: -1.2, l: 0.2 }, -2, 5)], [28, ballAt({ py: 7.6, pz: -3.2, l: 0.5 }, -3.4, 5.2)],
+  ], 32);
+  function wallTarget(S, P, gd) {
+    // The target ring on both faces of the board: the athlete sees one, the camera the other.
+    var k = gd.k;
+    slab(k, -6.4, 47, 12.6, 6.4, 67, 13.4, 3);
+    [12, 14].forEach(function (z) {
+      var c = [0, 57 * k, z * k];
+      for (var i = 0; i < 24; i++) {
+        var a = (i / 24) * 2 * Math.PI;
+        rod(add(c, [5 * k * Math.cos(a), 5 * k * Math.sin(a), 0]), add(c, [5 * k * Math.cos(a + 0.27), 5 * k * Math.sin(a + 0.27), 0]), 0.6, 1);
+      }
+    });
+    slab(k, -0.6, 0, 13.4, 0.6, 48, 14.6, 6);
+  }
+  var PISTOL = moves(bothSides([
+    [0, { py: 14.4, pz: 0, l: 0.06, hp: 0, fb: [1.2, 2, 0, 0], fa: [2.4, 6.4, 9.6, -0.4], h: [4, 18, 9], ap: [0.5, -0.8, -0.3] }], [3, {}],
+    [11, { py: 6.4, pz: -3.2, l: 0.52, fa: [2.4, 6.4, 9.6, -0.4], h: [4, 14, 9.5] }], [13, {}], [21, { py: 14.4, pz: 0, l: 0.06, h: [4, 18, 9] }], [23, {}],
+  ], 24), 48);
+  function hipsAt(o) { return held(assign({ ap: [1, -0.2, -0.6] }, o), -7, 1.4, 4.2); }
+  var LUNGE = moves(lungeKeys(hipsAt), 40);
+  var WALK_LUNGE = moves(bothSides([
+    [0, hipsAt({ py: 8.6, pz: 0, l: 0.04, hp: 0, fa: [2.6, 2, 6.8, 0], fb: [2.6, 2.8, -6.2, 1.05] })], [2, hipsAt({})],
+    [6, hipsAt({ py: 14.2, fa: [2.6, 2, 0, 0], fb: [2.6, 5.5, 0.5, 0.3] })], [10, hipsAt({ py: 12, fa: [2.6, 2, -3.4, 0.4], fb: [2.6, 3.2, 6.6, -0.1] })],
+  ], 16), 32);
+  // On the back, the knees out and the soles together; sit up and touch the feet.
+  var SIT_DOWN = { py: 3.8, pz: 0, l: -1.5708, hp: -0.71, f: [1.2, 2, 7.6, -0.2], lp: [1, 0.5, 0], h: [4.4, 1.5, -16.2], ap: [0.6, 0.4, -0.2] };
+  var SIT_UP = moves([[0, SIT_DOWN], [2, {}], [9, { l: 0.25, hp: 0.25, h: [2, 3, 8.6], ap: [0.6, -0.4, 0.3] }], [11, {}], [18, SIT_DOWN]], 20);
+  function abmat(S, P, gd) { slab(gd.k, -4, 0, -6, 4, 1.4, -1, 23); }
+  var GHD_DOWN = { py: 17.8, pz: 0, l: -2, hp: -0.9, f: [2.4, 13, 11, -0.3], lp: [0.3, 1, 0.3], h: [4.4, 10.4, -16], ap: [0.6, 0.4, -0.2] };
+  var GHD = moves([[0, GHD_DOWN], [2, {}], [5, { l: -0.9, hp: -0.4, h: [4.4, 29, -12] }], [9, { l: 0.4, hp: 0.3, h: [3, 14.5, 11], ap: [0.5, -0.6, 0.2] }], [11, {}], [15, { l: -0.8, hp: -0.4, h: [4.4, 30, -12.4] }], [19, GHD_DOWN]], 22);
+  function ghdMachine(S, P, gd) {
+    var k = gd.k;
+    slab(k, -3.4, 13.6, -3.4, 3.4, 16, 3.4, 23);
+    slab(k, -1, 0, -1, 1, 13.6, 1, 6);
+    rod([0, 1 * k, -10 * k], [0, 1 * k, 15 * k], 1.2, 6);
+    rod([0, 1 * k, 12 * k], [0, 11 * k, 12 * k], 1, 6);
+    rod([-3 * k, 12 * k, 12.6 * k], [3 * k, 12 * k, 12.6 * k], 1.4, 23);
+    rod([-3 * k, 14.6 * k, 11 * k], [3 * k, 14.6 * k, 11 * k], 1.4, 23);
+  }
+  var BACK_EXT_DOWN = { py: 17.6, pz: 0, l: 2.6, hp: 1.1, f: [2.4, 14, -12, 1.4], h: [1.6, 15, 3], ap: [0.6, -0.4, 0.8] };
+  var BACK_EXT = moves([[0, BACK_EXT_DOWN], [2, {}], [9, held({ l: 1.45, hp: 0.6, ap: [0.8, -1, 0.3] }, -2.6, 2.4, 1.6)], [11, held({}, -2.6, 2.4, 1.6)], [18, BACK_EXT_DOWN]], 20);
+  function backExtMachine(S, P, gd) {
+    var k = gd.k;
+    slab(k, -3.4, 14, -1, 3.4, 16.4, 4.6, 23);
+    slab(k, -1, 0, 0, 1, 14, 2, 6);
+    rod([0, 1 * k, -14 * k], [0, 1 * k, 6 * k], 1.2, 6);
+    rod([0, 1 * k, -12 * k], [0, 12 * k, -12 * k], 1, 6);
+    rod([-3 * k, 13.2 * k, -12.4 * k], [3 * k, 13.2 * k, -12.4 * k], 1.4, 23);
+  }
+  var PLANK_P = { py: 6, pz: 0, l: 1.45, hp: 0.4, f: [2.6, 2.6, -12.5, 1.3], h: [2, 1, 12.6], ap: [0.3, -1, 0] };
+  var PLANK = moves([[0, PLANK_P], [8, { py: 6.4 }], [16, PLANK_P]], 16);
+  var HOLLOW_P = { py: 3.8, pz: 0, l: -1.32, hp: -0.5, f: [1.6, 7, 12, -0.3], h: [4, 8, -16.4], ap: [0.6, 0.4, -0.2] };
+  var HOLLOW_HOLD = moves([[0, HOLLOW_P], [8, { l: -1.4, f: [1.6, 6, 12.2, -0.3], h: [4, 7, -16.6] }], [16, HOLLOW_P]], 16);
+  var VUP_FLAT = { py: 3.8, pz: 0, l: -1.5708, hp: -0.71, f: [1.6, 3, 12.4, -0.6], h: [4, 3, -17.6], ap: [0.6, 0.4, -0.2] };
+  var V_UP = moves([[0, VUP_FLAT], [2, {}], [8, { py: 3.8, l: -0.35, hp: -0.1, f: [1.6, 15.5, 7.5, -0.4], h: [2, 15, 6.6] }], [10, {}], [17, VUP_FLAT]], 20);
+  // The jump rope turns once a hop, or twice in a higher hop: g[0] is where it is on its circle.
+  function skip(N, turns, high) {
+    return function (t) {
+      var u = ((t / N) % 1 + 1) % 1, air = high ? 0.6 : 0.5, y = u < air ? (high ? 2.6 : 1.2) * Math.sin(Math.PI * u / air) : 0;
+      var s = high ? (u < air ? 0.9 * u / air : 0.9 + 0.1 * (u - air) / (1 - air)) : u, a = 2 * Math.PI * turns * s + (high ? 0.4 : Math.PI / 2 - Math.PI * 0.5);
+      return { py: 14.4 + y - (u < air ? 0 : 0.4), pz: 0, l: 0.05, hp: 0, f: [[2, 2 + y, 0.4, y > 0.3 ? 0.6 : 0], [2, 2 + y, 0.4, y > 0.3 ? 0.6 : 0]], h: [[6.6, 13.6 + y, 3.2], [6.6, 13.6 + y, 3.2]], ap: [0.5, -0.8, -0.6], g: [a] };
+    };
+  }
+  // The rope sweeps an oval round the body, well clear of it: over the head, under the feet, a hand's width in front
+  // and behind. Cream with orange handles, so it reads on the dark floor.
+  function jumpRope(S, P, gd) {
+    var k = gd.k, a = P.g[0], A = grip(S, 0, gd), B = grip(S, 1, gd), prev = A;
+    for (var i = 1; i <= 20; i++) {
+      var u = i / 20, w = Math.pow(Math.sin(Math.PI * u), 0.5), base = add(mul(A, 1 - u), mul(B, u));
+      var p = add(base, [0, (3.4 + 18 * Math.cos(a)) * k * w, 11 * k * Math.sin(a) * w]);
+      rod(prev, p, 0.8, 3);
+      prev = p;
+    }
+    [A, B].forEach(function (g) { rod(add(g, [0, -1.2 * k, 0]), add(g, [0, 1.2 * k, 0]), 0.9, 1); });
+  }
+
+  // The machines: rower, bikes, ski, the pool and the sled.
+  var ROW_CATCH = { py: 6.2, pz: 1.5, l: 0.45, hp: -0.1, f: [2.6, 4.5, 7.5, -0.5], lp: [0.3, 1, 0.2], h: [3, 11, 13.2], ap: [0.6, -0.8, -0.2] };
+  var ROW = moves([[0, ROW_CATCH], [5, { pz: -2, l: 0.3, h: [3, 11, 9] }], [8, held({ pz: -5, l: -0.4, hp: 0.1, ap: [0.6, 0, -1] }, -3.6, 2.8, 3)], [10, held({}, -3.6, 2.8, 3)],
+    [14, { pz: -4.6, l: 0.3, hp: -0.1, h: [3, 10.6, 6], ap: [0.6, -0.8, -0.2] }], [18, { pz: -1, l: 0.42, h: [3, 11, 11] }], [22, ROW_CATCH]], 24);
+  function rower(S, P, gd) {
+    var k = gd.k, z = S.pel[2] / k, hz = (S.wr[0][2] + S.wr[1][2]) / 2 / k, hy = (S.wr[0][1] + S.wr[1][1]) / 2 / k;
+    slab(k, -1.4, 1, -14, 1.4, 3, 9, 6);
+    slab(k, -2.6, 3, z - 2.2, 2.6, 4.6, z + 2.2, 5);
+    slab(k, -3.4, 0, 9, 3.4, 9, 15, 5);
+    slab(k, -3.4, 2.4, 6.6, 3.4, 3.4, 9, 6);
+    slab(k, -1, 0, -15, 1, 1, -12, 6);
+    rod([0, hy * k, hz * k], [0, 8 * k, 9 * k], 0.4, 4);
+    rod([-3.2 * k, hy * k, hz * k + 1], [3.2 * k, hy * k, hz * k + 1], 0.7, 5);
+  }
+  // Pedals turn on a crank under the seat; forward: over the top towards the front, down, back along the bottom; the air bike's arms push and pull against the legs.
+  function pedal(arms) {
+    return function (t) {
+      var ph = 2 * Math.PI * (((t / 12) % 1 + 1) % 1);
+      var f = [0, 1].map(function (i) { var a = ph + i * Math.PI; return [2.6, 6.5 - 3.2 * Math.sin(a), 2.8 + 3.2 * Math.cos(a), -0.1 * Math.sin(a)]; });
+      var h = arms ? [0, 1].map(function (i) { var a = ph + i * Math.PI; return [4.4, 19.4, 9 + 2.4 * Math.cos(a)]; }) : [[3.8, 20.2, 8.4], [3.8, 20.2, 8.4]];
+      return { py: 15.4 + 0.15 * Math.sin(2 * ph), pz: -2, l: arms ? 0.4 : 0.62, hp: 0.1, f: f, h: h, ap: [0.6, -0.7, -0.3], lp: [0.3, 0.6, 1], g: [ph] };
+    };
+  }
+  function bike(fan) {
+    return function (S, P, gd) {
+      var k = gd.k;
+      slab(k, -4, 0, -8, 4, 1, -6, 6);
+      slab(k, -4, 0, 9, 4, 1, 11, 6);
+      rod([0, 1 * k, -7 * k], [0, 13.6 * k, -2.4 * k], 0.9, 4);
+      slab(k, -2.4, 13.6, -4.6, 2.4, 14.6, -0.4, 5);
+      rod([0, 1 * k, 10 * k], [0, 18 * k, 7.6 * k], 0.9, 4);
+      rod([0, 6.5 * k, 2.8 * k], [0, 8 * k, 9 * k], 0.7, 6);
+      if (fan) {
+        for (var i = 0; i < 2; i++) disc([(i ? -1.4 : 1.4) * k, 9 * k, 11.4 * k], 6 * k, i ? 6 : 5);
+        [0, 1].forEach(function (j) { var c = grip(S, j, gd); rod(c, [c[0], 6 * k, 8 * k], 0.7, 4); });
+      } else {
+        rod([-3.8 * k, 18.4 * k, 7.4 * k], [3.8 * k, 18.4 * k, 7.4 * k], 0.7, 5);
+        slab(k, -1.8, 3, 8, 1.8, 13, 14, 5);
+      }
+      [0, 1].forEach(function (j) { var a = P.g[0] + j * Math.PI; rod([(j ? -1.4 : 1.4) * k, 6.5 * k, 2.8 * k], [(j ? -2.6 : 2.6) * k, (6.5 - 3.2 * Math.sin(a)) * k, (2.8 + 3.2 * Math.cos(a)) * k], 0.6, 4); });
+    };
+  }
+  var SKI_TOP = { py: 14.6, pz: -0.4, l: 0.04, hp: 0.15, f: [2.8, 2, 0, 0], h: [3.6, 31, 5], ap: [0.6, -0.6, -0.4] };
+  var SKI = moves([[0, SKI_TOP], [3, { py: 15, f: [2.8, 2.6, 0, 0.4] }], [8, { py: 12, pz: -3.8, l: 0.9, hp: -0.2, f: [2.8, 2, 0, 0], h: [4.4, 10, 1.4] }], [10, {}], [16, SKI_TOP]], 20);
+  function skiErg(S, P, gd) {
+    var k = gd.k;
+    slab(k, -2.6, 0, 7, 2.6, 40, 10, 5);
+    slab(k, -6, 0, 4, 6, 1, 12, 6);
+    [0, 1].forEach(function (j) { var c = grip(S, j, gd), x = (j ? -2.4 : 2.4) * k; rod([x, 38 * k, 6.6 * k], c, 0.4, 4); rod(add(c, [0, -1.4 * k, 0]), add(c, [0, 1.4 * k, 0]), 0.8, 5); });
+  }
+  // Front crawl, the body flat on the water; one arm reaches as the other pulls, the legs kick.
+  function swim(t) {
+    var ph = ((t / 16) % 1 + 1) % 1;
+    var h = [0, 1].map(function (i) {
+      var u = (ph + i * 0.5) % 1;
+      if (u < 0.5) { var s = u / 0.5; return [3.4, 6.2 - 3 * Math.sin(Math.PI * s), 14.6 - 14 * s]; }
+      var w = (u - 0.5) / 0.5;
+      return [4.6, 6.2 + 5 * Math.sin(Math.PI * w), 0.6 + 14 * w];
+    });
+    var f = [0, 1].map(function (i) { return [1.8, 6 + 1.2 * Math.sin(2 * Math.PI * (ph * 3 + i * 0.5)), -12.4, 1.5]; });
+    return { py: 6, pz: 0, l: 1.5, hp: 0.62, f: f, h: h, ap: [0.6, 1, 0] };
+  }
+  function pool(S, P, gd) { slab(gd.k, -10, 0, -22, 10, 4.4, 22, 20); }
+  // The sled: two steel skids turned up at the front, an iron deck, a post with three bumpers; for the push, two
+  // uprights at its near end joined by a grip bar. z0 is the end nearer the athlete, in base units.
+  function sledModel(k, z0, uprights) {
+    [-1, 1].forEach(function (s) {
+      var x = s * 4.2 * k;
+      rod([x, 0.8 * k, (z0 - 0.4) * k], [x, 0.8 * k, (z0 + 9) * k], 0.9, 4);
+      rod([x, 0.8 * k, (z0 + 9) * k], [x, 3 * k, (z0 + 10.6) * k], 0.9, 4);
+      rod([x, 0.8 * k, (z0 - 0.4) * k], [x, 2.4 * k, (z0 - 1.4) * k], 0.9, 4);
+    });
+    slab(k, -4.4, 1.4, z0 + 0.4, 4.4, 2.4, z0 + 8.6, 34);
+    rod([0, 2.4 * k, (z0 + 4.4) * k], [0, 10.5 * k, (z0 + 4.4) * k], 1, 4);
+    [[2.9, 1], [4.2, 34], [5.5, 1]].forEach(function (p) {
+      var c = W3([0, p[0] * k, (z0 + 4.4) * k]), r = 4.6 * k;
+      for (var x = Math.floor(c[0] - r); x <= Math.ceil(c[0] + r); x++) for (var z = Math.floor(c[2] - r); z <= Math.ceil(c[2] + r); z++) {
+        var dx = x + 0.5 - c[0], dz = z + 0.5 - c[2], d = dx * dx + dz * dz;
+        if (d <= r * r) put(x, Math.floor(c[1]), z, d < 1.5 ? 3 : p[1]);
+      }
+    });
+    if (uprights) {
+      [-1, 1].forEach(function (s) { rod([s * 3.8 * k, 2.4 * k, (z0 + 0.8) * k], [s * 3.8 * k, 16.4 * k, (z0 - 1.4) * k], 1, 4); });
+      rod([-3.8 * k, 16.4 * k, (z0 - 1.4) * k], [3.8 * k, 16.4 * k, (z0 - 1.4) * k], 1, 4);
+      rod([-3.8 * k, 7 * k, (z0 + 0.2) * k], [3.8 * k, 7 * k, (z0 + 0.2) * k], 0.8, 4);
+    }
+  }
+  // Driving a sled: the legs of a run, the body leaning into the uprights.
+  function sledPush(t) {
+    var ph = ((t / 16) % 1 + 1) % 1, py = 11.6 + 0.4 * Math.cos(4 * Math.PI * ph);
+    var f = [0, 1].map(function (i) {
+      var u = (ph + i * 0.5) % 1;
+      if (u < 0.5) { var s = u / 0.5; return [2.7, 2, 1.5 - 9 * s, 0.6 * s]; }
+      var w = (u - 0.5) / 0.5, e = w * w * (3 - 2 * w);
+      return [2.7, 2 + 4.5 * Math.sin(Math.PI * w), -7.5 + 9 * e, 0.6 - 0.6 * w];
+    });
+    return { py: py, pz: -2.6, l: 0.85, hp: -0.35, f: f, h: [[3.8, 15.4, 9.4], [3.8, 15.4, 9.4]], ap: [0.6, -0.8, -0.2] };
+  }
+  function sled(S, P, gd) { sledModel(gd.k, 11, true); }
+  // Dragging a sled: walking backwards, the body leaning away, both hands on a taut rope to the sled's front.
+  function sledPull(t) {
+    var ph = ((t / 16) % 1 + 1) % 1, py = 12.4 + 0.35 * Math.cos(4 * Math.PI * ph), tug = 0.6 * Math.cos(4 * Math.PI * ph);
+    var f = [0, 1].map(function (i) {
+      var u = (ph + i * 0.5) % 1;
+      if (u < 0.55) { var s = u / 0.55; return [2.8, 2, -3.6 + 7.2 * s, s < 0.2 ? 0.2 - s : 0]; }
+      var w = (u - 0.55) / 0.45, e = w * w * (3 - 2 * w);
+      return [2.8, 2 + 2.4 * Math.sin(Math.PI * w), 3.6 - 7.2 * e, 0.3 * Math.sin(Math.PI * w)];
+    });
+    return { py: py, pz: -1.2, l: -0.28, hp: 0.25, f: f, h: [[2.2, 13 + tug, 4.4 - tug], [2.2, 13 + tug, 4.4 - tug]], ap: [0.6, -0.8, -0.3] };
+  }
+  function sledRope(S, P, gd) {
+    var k = gd.k, mid = mul(add(grip(S, 0, gd), grip(S, 1, gd)), 0.5);
+    sledModel(k, 22, false);
+    rod(mid, [0, 1.6 * k, 21.4 * k], 0.9, 21);
+    rod(mid, [0, mid[1] - 1.5 * k, mid[2] - 4 * k], 0.9, 21);
+  }
+
+  function lift(id, pose, N, still, extra) { register(id, assign({ N: N, pose: pose, form: COLUMN, bar: 1, prop: "bar", still: still }, extra)); }
+  lift("deadlift", DEADLIFT, 28, 12);
+  lift("sumo", SUMO, 28, 12);
+  lift("rdl", RDL, 24, 11);
+  lift("goodmorning", GOOD_MORNING, 24, 11);
+  lift("bbrow", BENT_ROW, 20, 9);
+  lift("frontsquat", FRONT_SQUAT, 24, 12);
+  lift("backsquat", BACK_SQUAT, 24, 12);
+  lift("ohs", OHS, 24, 12);
+  lift("press", PRESS, 24, 11);
+  lift("pushpress", PUSH_PRESS, 28, 14);
+  lift("pushjerk", PUSH_JERK, 32, 13);
+  lift("splitjerk", SPLIT_JERK, 32, 13);
+  lift("thruster", THRUSTER, 28, 11);
+  lift("clean", CLEAN, 40, 20);
+  lift("powerclean", POWER_CLEAN, 36, 19);
+  lift("hangclean", HANG_CLEAN, 30, 16);
+  lift("cleanjerk", CLEAN_JERK, 70, 43);
+  lift("powersnatch", POWER_SNATCH, 37, 15);
+  lift("hangsnatch", HANG_SNATCH, 31, 13);
+  lift("bench", BENCH, 22, 11, { gear: bench, form: COLUMN });
+  lift("hipthrust", HIP_THRUST, 22, 10, { gear: thrustBench, form: COLUMN });
+  lift("racklunge", RACK_LUNGE, 40, 10);
+  lift("ohlunge", OH_LUNGE, 40, 10);
+
+  function load(id, pose, N, still, gear, extra) { register(id, assign({ N: N, pose: pose, form: [2, 28, 22, -4], gear: gearOf(gear), still: still }, extra)); }
+  load("dbsnatch", DB_SNATCH, 56, 14, "db1");
+  load("dbclean", DB_CLEAN, 56, 14, "db1");
+  load("dbcleanjerk", DB_CLEAN_JERK, 76, 24, "db1");
+  load("dbthruster", DB_THRUSTER, 28, 11, "db2");
+  load("dbpushpress", DB_PUSH_PRESS, 28, 14, "db2");
+  load("dbrow", DB_ROW, 32, 8, "db1");
+  load("renegade", RENEGADE, 28, 6, "db2", { form: [2, 28, 34, -4] });
+  load("devilpress", DEVIL_PRESS, 48, 30, "db2", { form: [2, 28, 34, -4] });
+  load("goblet", GOBLET, 24, 12, "goblet");
+  load("kbswing", KB_SWING, 16, 7, "kb2h");
+  load("kbsnatch", KB_SNATCH, 36, 8, "kb1");
+  load("kbclean", KB_CLEAN, 36, 8, "kb1");
+  load("tgu", TGU, 70, 16, "kb1", { form: [2, 30, 34, -4] });
+  load("farmers", FARMERS, 16, 4, "db2");
+  load("sandbag", SANDBAG, 32, 17, "sandbag");
+
+  function gym(id, pose, N, still, extra) { register(id, assign({ N: N, pose: pose, form: [4, 17, 30, 0], still: still }, extra)); }
+  gym("strictpull", STRICT_PULL, 32, 15, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("c2b", C2B, 24, 9, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("t2b", T2B, 24, 10, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("k2e", K2E, 24, 10, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("barmu", BAR_MU, 32, 17, { form: COLUMN, rig: 1, prop: "rig" });
+  gym("ringmu", RING_MU, 36, 21, { hang: 1, gear: rings });
+  gym("ringdip", RING_DIP, 24, 1, { hang: 1, gear: rings });
+  gym("dip", DIP, 24, 1, { gear: parallelBars, form: [4, 20, 30, 0] });
+  gym("hspu", facing(HSPU), 24, 1, { gear: wall(4.6, 5.8) });
+  gym("hswalk", facing(handWalk), 16, 2);
+  gym("wallwalk", WALL_WALK, 68, 30, { gear: wall(-13.4, -12), form: [2, 24, 40, 0] });
+  gym("pushup", PUSH_UP, 20, 1, { form: [4, 15, 34, 0] });
+  gym("rope", ROPE_CLIMB, ROPE_C.N, 18, { gear: rope });
+  gym("legless", LEGLESS, LEGLESS_C.N, 18, { gear: rope });
+  gym("pegboard", PEGBOARD, PEG_C.N, 18, { gear: pegboard });
+  gym("barfacing", BAR_FACING, 88, 15, { gear: floorBarAcross, form: COLUMN });
+  gym("burpeebar", BURPEE_OVER, 88, 15, { gear: floorBarAlong, form: COLUMN });
+  gym("burpeedb", BURPEE_OVER, 88, 15, { gear: floorDb, form: [2, 24, 34, 0] });
+  gym("bbjo", BBJO, 104, 37, { gear: plyoBox(12), form: [2, 30, 50, 0] });
+  gym("bjo", BJO, 56, 14, { gear: plyoBox(12), form: [2, 30, 34, 0] });
+  gym("boxjump", BOX_JUMP, 36, 16, { gear: plyoBox(12), form: [2, 30, 34, 0] });
+  gym("stepup", STEP_UP, 48, 11, { gear: plyoBox(10), form: [2, 30, 30, 0] });
+  gym("dbstepover", STEP_OVER, 56, 11, { gear: gearOf(plyoBox(10), "db2"), form: [2, 30, 34, 0] });
+
+  function floorMove(id, pose, N, still, extra) { register(id, assign({ N: N, pose: pose, form: [2, 28, 22, -4], still: still }, extra)); }
+  floorMove("wallball", WALL_BALL, 32, 9, { gear: gearOf("ball", wallTarget) });
+  floorMove("pistol", PISTOL, 48, 12);
+  floorMove("lunge", LUNGE, 40, 10);
+  floorMove("walklunge", WALK_LUNGE, 32, 0);
+  floorMove("situp", SIT_UP, 20, 9, { gear: abmat, form: [2, 24, 30, 0] });
+  floorMove("ghd", GHD, 22, 9, { gear: ghdMachine, form: [2, 24, 34, 0] });
+  floorMove("backext", BACK_EXT, 20, 9, { gear: backExtMachine, form: [2, 24, 34, 0] });
+  floorMove("plank", PLANK, 16, 0, { form: [2, 24, 30, 0] });
+  floorMove("hollow", HOLLOW_HOLD, 16, 0, { form: [2, 24, 30, 0] });
+  floorMove("vup", V_UP, 20, 9, { form: [2, 24, 30, 0] });
+  floorMove("su", skip(8, 1), 8, 2, { gear: jumpRope });
+  floorMove("du", skip(10, 2, true), 10, 2, { gear: jumpRope });
+  floorMove("row", ROW, 24, 8, { gear: rower, form: [2, 26, 34, 0] });
+  floorMove("bike", pedal(), 12, 0, { gear: bike(), form: [2, 26, 30, 0] });
+  floorMove("airbike", pedal(true), 12, 0, { gear: bike(true), form: [2, 26, 30, 0] });
+  floorMove("ski", SKI, 20, 8, { gear: skiErg, form: [2, 26, 30, 0] });
+  floorMove("swim", swim, 16, 4, { gear: pool, form: [2, 26, 34, 0] });
+  floorMove("sledpush", sledPush, 16, 4, { gear: sled, form: [2, 26, 34, 0] });
+  floorMove("sledpull", sledPull, 16, 4, { gear: sledRope, form: [2, 26, 34, 0] });
 
   // ---- Bodies and the three styles
 
@@ -523,11 +1325,11 @@
   }
   var FX = [0, 0, 0.45, 0, 0.62, 0.5, 0.8, 0, 1, 0], BX = [0, 0.55, 0.2, 0.45, 0.4, 0, 1, 0];
   function body(k, o) {
-    return assign({ k: k, shoe: [9, 1.3, 1.05], pl: 4.3, nr: 1.3, hr: 1.05, sl: 0.5 }, o, { B: assign(scaled(BASE, k), o.B) });
+    return assign({ k: k, shoe: [9, 1.3, 1.05], pl: 5.2, nr: 1.3, hr: 1.05, sl: 0.5 }, o, { B: assign(scaled(BASE, k), o.B) });
   }
   var MAN = { B: { hw: 2.5, sw: 5.1, nk: 1.8 }, R: { th: lin(2.3, 1.55), sh: lin(1.7, 1), ua: lin(1.5, 1.25), fa: lin(1.25, 0.95) }, T: { w: [0, 2.8, 0.25, 2.4, 0.6, 3.8, 0.85, 4.6, 0.93, 4.5, 1, 3], d: [0, 2.1, 0.5, 2, 0.9, 2.5, 1, 2.2], sv: 2.7, vb: 1.8 } };
   // About 6% shorter, narrower shoulders, wider hips, a marked waist, a shorter torso, a slimmer neck.
-  var WOMAN = { B: { hw: 2.7, sw: 4.25, nk: 1.7, tor: 10.2 }, R: { th: lin(2.45, 1.5), sh: lin(1.55, 0.95), ua: lin(1.3, 1.1), fa: lin(1.1, 0.85) }, T: { w: [0, 3.4, 0.14, 3.5, 0.3, 2.4, 0.6, 3.15, 0.85, 3.9, 0.93, 3.8, 1, 2.6], d: [0, 2.2, 0.5, 1.9, 0.9, 2.3, 1, 2], fx: FX, bx: BX, sv: 2.6, vb: 1.8 }, nr: 1.1, hr: 0.95, sl: 0.42, shoe: [9, 1.2, 1], pl: 4.1 };
+  var WOMAN = { B: { hw: 2.7, sw: 4.25, nk: 1.7, tor: 10.2 }, R: { th: lin(2.45, 1.5), sh: lin(1.55, 0.95), ua: lin(1.3, 1.1), fa: lin(1.1, 0.85) }, T: { w: [0, 3.4, 0.14, 3.5, 0.3, 2.4, 0.6, 3.15, 0.85, 3.9, 0.93, 3.8, 1, 2.6], d: [0, 2.2, 0.5, 1.9, 0.9, 2.3, 1, 2], fx: FX, bx: BX, sv: 2.6, vb: 1.8 }, nr: 1.1, hr: 0.95, sl: 0.42, shoe: [9, 1.2, 1], pl: 5.2 };
   function thicker(o, d) {
     var R = {};
     for (var k in o.R) R[k] = o.R[k].map(function (x) { return x + d; });
@@ -540,10 +1342,11 @@
   var K_MAN = 1.2, K_WOMAN = 1.128;
 
   // Colour ids: 1 orange, 2 shorts, 3 cream, 4 steel, 5 ink, 6 dark steel, 7 sole, 8 knee sleeve, 9 shoe, 10-13 skin,
-  // 14-17 hair, 18 lips, 19 leather, 24 bib, 25 outline, 26-33 the lane colours.
-  var PAL = { 1: "#FF4A1C", 2: "#2b2f3b", 3: "#f2efe6", 4: "#b5b1a5", 5: "#14110f", 6: "#8d8a82", 7: "#1b1917", 8: "#454d63", 9: "#e6e1d3", 10: "#e9b48c", 11: "#f8d2b2", 12: "#b87a58", 13: "#8d5a3f", 14: "#4a2f22", 15: "#14110f", 16: "#c9a05a", 17: "#7a5038", 18: "#f08a8a", 19: "#6a4328", 24: "#f6f4ee", 25: "#0b0a09" };
+  // 14-17 hair, 18 lips, 19 leather, 20 water, 21 wood, 22 ball, 23 pad,
+  // 24 bib, 25 outline, 26-33 the lane colours, 34 iron (dumbbells and kettlebells, light enough to read on the dark floor).
+  var PAL = { 1: "#FF4A1C", 2: "#2b2f3b", 3: "#f2efe6", 4: "#b5b1a5", 5: "#14110f", 6: "#8d8a82", 7: "#1b1917", 8: "#454d63", 9: "#e6e1d3", 10: "#e9b48c", 11: "#f8d2b2", 12: "#b87a58", 13: "#8d5a3f", 14: "#4a2f22", 15: "#14110f", 16: "#c9a05a", 17: "#7a5038", 18: "#f08a8a", 19: "#6a4328", 24: "#f6f4ee", 25: "#0b0a09", 20: "#2f7fd0", 21: "#b8834f", 22: "#e2c86a", 23: "#5b6172", 34: "#7c8796" };
   // The arcade palette: 13 warm base colours, plus the lane's.
-  var RET = { 1: "#ff5a1f", 2: "#34345a", 3: "#f6ecd2", 4: "#b9a98c", 5: "#1c1118", 6: "#b9a98c", 7: "#1c1118", 8: "#34345a", 9: "#f6ecd2", 10: "#f2b58a", 11: "#fbd7b4", 12: "#c27d54", 13: "#8d5a3f", 14: "#6b3f2a", 15: "#1c1118", 16: "#e0b050", 17: "#6b3f2a", 18: "#ff5a1f", 19: "#6b3f2a", 24: "#f6ecd2", 25: "#1c1118" };
+  var RET = { 1: "#ff5a1f", 2: "#34345a", 3: "#f6ecd2", 4: "#b9a98c", 5: "#1c1118", 6: "#b9a98c", 7: "#1c1118", 8: "#34345a", 9: "#f6ecd2", 10: "#f2b58a", 11: "#fbd7b4", 12: "#c27d54", 13: "#8d5a3f", 14: "#6b3f2a", 15: "#1c1118", 16: "#e0b050", 17: "#6b3f2a", 18: "#ff5a1f", 19: "#6b3f2a", 24: "#f6ecd2", 25: "#1c1118", 20: "#3c78c8", 21: "#c08a50", 22: "#f0c860", 23: "#5a4a6a", 34: "#8a8aa6" };
   LANE_COLOURS.forEach(function (hex, i) { PAL[26 + i] = hex; RET[26 + i] = hex; });
   // The kit's shorts and chest stripe for each lane colour, so both always contrast with the shirt.
   var KIT_SHORTS = [2, 2, 3, 2, 2, 3, 2, 2];
@@ -584,13 +1387,13 @@
   // hands stay on it.
   function barY(sty) { return 34 * sty.G[0].k; }
   function poseOf(sty, g, mv, t) {
-    var P = mv.pose(t), k = sty.G[0].k, r = sty.G[g].r, Y0 = mv.rig ? barY(sty) : 0, q = k * r;
+    var P = mv.pose(t), k = sty.G[0].k, r = sty.G[g].r, Y0 = mv.rig || mv.hang ? barY(sty) : 0, q = k * r;
     var out = {
-      py: Y0 + (P.py * k - Y0) * r, pz: P.pz * q, l: P.l, hp: P.hp, ap: P.ap,
+      py: Y0 + (P.py * k - Y0) * r, pz: P.pz * q, px: (P.px || 0) * q, l: P.l, hp: P.hp, ap: P.ap, lp: P.lp, g: P.g, flip: P.flip,
       f: P.f.map(function (f) { return [f[0] * q, Y0 + (f[1] * k - Y0) * r, f[2] * q, f[3]]; }),
       h: P.h.map(function (h) { return [h[0] * q, Y0 + (h[1] * k - Y0) * r, h[2] * q]; }),
     };
-    if (mv.rig && g) {
+    if ((mv.rig || mv.hang) && g) {
       var d = sty.G[0].B.tor * sty.G[1].r - sty.G[1].B.tor;
       out.py += d;
       out.f.forEach(function (f) { f[1] += d; });
@@ -616,6 +1419,8 @@
             });
             r.bone = Math.max(r.bone, Math.abs(len(sub(S.neck, S.pel)) - B.tor), Math.abs(len(sub(S.hip[0], S.hip[1])) - 2 * B.hw),
               Math.abs(len(sub(S.sh[0], S.sh[1])) - 2 * B.sw), Math.abs(len(sub(S.hc, S.neck)) - (B.nk + B.hh + 0.5)));
+            if (S.miss > r.miss) r.worst = name;
+            if (!(r.bone < 1)) r.broken = r.broken || name;
             r.miss = Math.max(r.miss, S.miss);
           }
         });
@@ -627,7 +1432,7 @@
 
   // ---- The voxel rasteriser and the bake into cube sprites
 
-  var NX = 80, NY = 64, NZ = 80, C = 40, SX = NY * NZ, SY = NZ;
+  var NX = 80, NY = 96, NZ = 80, C = 40, SX = NY * NZ, SY = NZ;
   var V = new Uint8Array(NX * NY * NZ), list = new Int32Array(1 << 16), ln = 0;
   // Turned half round about the athlete's own vertical axis, for a bake that faces back down the lane.
   var turned = false;
@@ -672,18 +1477,41 @@
   }
 
   // v: { woman, skin, hair, cut, n (number on the bib) }; tc: the lane colour's index.
+  // A loaded Olympic bar to scale with the athlete: 2.2 m long (2.0 m for a woman's bar), collars 1.31 m apart, two
+  // bumpers of 45 cm a side and the sleeve past them. The shaft is one voxel thick (a real one is 2.8 cm), the sleeve a cross. A man here is about 1.75 m, so one voxel is about 4.3 cm.
+  function barHalf(k) { return 21 * k; }
+  // w: the bar's middle on the grid; along: 0 for a bar across the athlete (x), 2 for one lying along the lane (z).
+  function barAt(w, gd, along) {
+    var half = Math.round(barHalf(gd.k)), inner = Math.round(13.2 * gd.k), r = gd.pl;
+    for (var t = -half; t <= half; t++) {
+      var a = Math.abs(t), o = a - inner, rad = 0.5, col = 4;
+      if (o >= 0 && o < 1) { rad = r * 0.4; col = 3; }
+      else if ((o >= 1 && o < 3) || (o >= 4 && o < 6)) { rad = r; col = 1; }
+      else if (o >= 3 && o < 4) { rad = r * 0.82; col = 6; }
+      else if (o >= 6) rad = 1;
+      for (var y = Math.floor(w[1] - rad); y <= Math.ceil(w[1] + rad); y++) for (var b = Math.floor(-rad); b <= Math.ceil(rad); b++) {
+        var dy = y + 0.5 - w[1] - 0.5, db = b;
+        if (dy * dy + db * db > rad * rad) continue;
+        if (along === 2) put(w[0] + b, y, w[2] + t, col);
+        else put(w[0] + t, y, w[2] + b, col);
+      }
+    }
+  }
+
   function raster(sty, v, mv, P, tc, vy) {
     var g = v.woman ? 1 : 0, gd = sty.G[g], B = gd.B, S = skel(P, B), R = gd.R, T = gd.T, hh = B.hh, kit = sty.kit, cut = v.cut;
     var sk = 10 + SKIN[v.skin], hr = 14 + v.hair, team = 26 + tc;
     var shirt = team, acc = team, shs = kit ? KIT_SHORTS[tc] : 2, stp = KIT_STRIPE[tc];
     var crop = g && !kit && [1, 0, 1, 0][cut], leg = g && !kit && [0, 1, 1, 0][cut], top0 = T.sv + (crop ? 2.3 : 0);
     var vb0 = T.sv + 0.9, vb1 = vb0 + (g ? 4 : 5);
+    // Equipment first, so the body drawn over it holds the bar, the rope or the ball.
+    if (mv.gear) mv.gear(S, P, gd);
     // The torso: an oriented box with a width and depth profile (chest and glutes asymmetric on a woman).
     var pa = W3(S.pel), pb = W3(S.neck);
     var lo = [0, 1, 2].map(function (i) { return Math.max(0, Math.floor(Math.min(pa[i], pb[i]) - 8)); });
     var hi = [NX - 1, NY - 1, NZ - 1].map(function (m, i) { return Math.min(m, Math.ceil(Math.max(pa[i], pb[i]) + 8)); });
     for (var x = lo[0]; x <= hi[0]; x++) for (var y = lo[1]; y <= hi[1]; y++) for (var z = lo[2]; z <= hi[2]; z++) {
-      var d0 = x + 0.5 - C, d1 = y + 0.5 - P.py, d2 = z + 0.5 - C - P.pz;
+      var d0 = x + 0.5 - C - (P.px || 0), d1 = y + 0.5 - P.py, d2 = z + 0.5 - C - P.pz;
       var w = d1 * S.nd[1] + d2 * S.nd[2], s = d1 * S.sd[1] + d2 * S.sd[2];
       if (s < -T.vb || s > B.tor + 0.3) continue;
       var f = s / B.tor, dp = pr(T.d, f), fx = T.fx ? pr(T.fx, f) : 0, bx = T.bx ? pr(T.bx, f) : 0;
@@ -705,7 +1533,10 @@
     }
     // The head: a rounded cube with eyes, lips, hair and headband; +z is forward.
     var h0 = W3(S.hc).map(function (q) { return Math.floor(q) + 0.5; });
-    function hv(f, l, u, col) { put(Math.floor(h0[0] + l), Math.floor(h0[1] + u), Math.floor(h0[2] + f), col); }
+    // Turned by the nearest quarter turn to where the head points, so a lying or upside-down athlete faces the right way.
+    var hq = ((Math.round(S.ha / (Math.PI / 2)) % 4) + 4) % 4, qc = [1, 0, -1, 0][hq], qs = [0, 1, 0, -1][hq];
+    function hp3(l, u, f) { return [h0[0] + l, h0[1] + u * qc - f * qs, h0[2] + f * qc + u * qs]; }
+    function hv(f, l, u, col) { var p = hp3(l, u, f); put(Math.floor(p[0]), Math.floor(p[1]), Math.floor(p[2]), col); }
     capsule(W3(add(S.neck, mul(S.hd, 0.2))), W3(add(S.neck, mul(S.hd, B.nk + 0.8))), gd.nr, gd.nr, sk);
     var band = !g || cut === 3 || kit, bob = g && cut === 3;
     for (var dx = -hh; dx <= hh; dx++) for (var dy = -hh; dy <= hh; dy++) for (var dz = -hh; dz <= hh; dz++) {
@@ -717,14 +1548,15 @@
         else if (g && dy === -1 && lw === 0) col = 18;
       }
       if (band && dy === hh - 1) col = acc;
-      put(h0[0] + dx - 0.5, h0[1] + dy - 0.5, h0[2] + dz - 0.5, col);
+      var hpos = hp3(dx - 0.5, dy - 0.5, dz - 0.5);
+      put(Math.round(hpos[0]), Math.round(hpos[1]), Math.round(hpos[2]), col);
     }
     var ty = clamp(vy, -1.5, 1.5), i, k;
     if (!g) {
       if (cut === 1) for (k = hh + 1; k <= hh + 3; k++) hv(-k, 0, Math.floor(hh / 2) - (k - hh - 1), hr);
       if (cut === 2) for (var a = -1; a <= 0; a++) for (var b = -1; b <= 0; b++) {
-        put(h0[0] - 0.5 + a, h0[1] - 0.5 + hh + 1, h0[2] - 0.5 + b, hr);
-        put(h0[0] - 0.5 + a, h0[1] - 0.5 + hh + 2, h0[2] - 0.5 + b, hr);
+        hv(b, a, hh + 1, hr);
+        hv(b, a, hh + 2, hr);
       }
       if (cut === 3) for (k = -hh + 1; k <= hh - 1; k++) hv(k, 0, hh + 1, hr);
     } else if (cut === 0) {
@@ -757,15 +1589,7 @@
       put(Math.floor(th[0]), Math.floor(th[1]), Math.floor(th[2]), sk);
     });
     if (mv.bar) {
-      var cc = W3([0, P.h[0][1], P.h[0][2]]).map(Math.round), hl = 6.2 * gd.k + 3.4;
-      cylinder(cc, hl, 1, 4);
-      [-1, 1].forEach(function (s2) {
-        var plate = cc.slice(), collar = cc.slice();
-        plate[0] += s2 * (hl - 1.5);
-        cylinder(plate, 1, gd.pl, 1);
-        collar[0] += s2 * (hl - 3.5);
-        cylinder(collar, 1, gd.pl * 0.37, 3);
-      });
+      barAt(W3([P.px || 0, (P.h[0][1] + P.h[1][1]) / 2, (P.h[0][2] + P.h[1][2]) / 2]).map(Math.round), gd, 0);
     }
     // Each athlete hangs from a station of their own: a bar between two posts. One bar across the team would run
     // diagonally up the stage in this camera and take the height of two athletes.
@@ -779,7 +1603,8 @@
       });
     }
   }
-  var RIG_HALF = 8;
+  // Half the rig's width: posts a forearm clear of the hands on either side, about 1.1 m apart.
+  var RIG_HALF = 13;
 
   // The isometric camera, exact so cubes are never sheared. U is the size of a voxel in backing pixels.
   var CAMS = {};
@@ -941,12 +1766,8 @@
   // ---- Equipment, baked by the same engine around the middle of its station
 
   function barbell(x, z, sty) {
-    var gd = sty.G[0], half = 6.2 * gd.k + 3.4, at = [C + Math.round(x), 4, C + Math.round(z)];
-    cylinder(at, half, 1, 4);
-    [-1, 1].forEach(function (side) {
-      cylinder([at[0] + side * (half - 1.5), at[1], at[2]], 1, gd.pl, 1);
-      cylinder([at[0] + side * (half - 3.5), at[1], at[2]], 1, gd.pl * 0.37, 3);
-    });
+    var gd = sty.G[0];
+    barAt([C + Math.round(x), Math.round(gd.pl), C + Math.round(z)], gd, 0);
   }
   function box(x0, y0, z0, w, h, d, c) {
     for (var x = 0; x < w; x++) for (var y = 0; y < h; y++) for (var z = 0; z < d; z++) put(C + x0 + x, y0 + y, C + z0 + z, c);
@@ -1035,13 +1856,32 @@
   function athlete(mvId, at, v, tc, budget, back) {
     return baked([styleId, mvId, at, v.woman ? 1 : 0, v.skin, v.hair, v.cut, v.n, tc, back ? "b" : ""].join(":"), budget, function () {
       var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
-      turned = !!back;
+      turned = !!back !== !!P.flip;
       try {
         raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
       } finally {
         turned = false;
       }
     });
+  }
+
+  // One athlete's frame on its own, the same bake the track draws: for the movement catalogue page and its tests.
+  function sprite(mvId, at, v, tc, sid, back) {
+    var keep = styleId;
+    styleId = sid || styleId;
+    try {
+      var sty = STYLES[styleId], mv = ANIMS[mvId], g = v.woman ? 1 : 0, P = poseOf(sty, g, mv, at);
+      ln = 0;
+      turned = !!back !== !!P.flip;
+      try {
+        raster(sty, v, mv, P, tc, P.py - poseOf(sty, g, mv, at - 1).py);
+      } finally {
+        turned = false;
+      }
+      return bake(sty, camera(VOXEL));
+    } finally {
+      styleId = keep;
+    }
   }
 
   function equipment(id, L, tc, budget) {
@@ -1811,6 +2651,8 @@
     MOVES: MOVES.map(function (row) { return { name: row[0], anim: row[1], approx: !!row[2] }; }),
     ANIMS: Object.keys(ANIMS),
     register: register,
+    sprite: sprite,
+    anim: function (id) { var a = ANIMS[id]; return a && { N: a.N, still: a.still }; },
     movementOf: movementOf,
     teamOf: teamOf,
     colourOf: colourOf,
